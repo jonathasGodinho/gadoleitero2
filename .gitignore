@@ -27,3 +27,6 @@ output.txt
 # Arquivos temporários
 *.sql
 backup_*.sql
+
+# Netlify
+.netlify/

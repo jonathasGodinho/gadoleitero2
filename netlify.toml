@@ -1,0 +1,11 @@
+[build]
+  command = "mkdir -p public && echo 'Terra Roxa System' > public/index.html"
+  publish = "public"
+
+[functions]
+  directory = "netlify/functions"
+
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/app"
+  status = 200
