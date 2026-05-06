@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Auditoria - Terra Roxa System{% endblock %}
+{% block page_title %}📝 Logs de Auditoria{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">📋 Histórico de Ações</h5>
+                <span class="badge bg-primary">{{ logs|length }} registros</span>
+            </div>
+            <div class="card-body p-0">
+                {% if logs %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Data/Hora</th>
+                                    <th>Usuário</th>
+                                    <th>Ação</th>
+                                    <th>Detalhes</th>
+                                    <th>IP</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in logs %}
+                                    <tr>
+                                        <td>{{ log.timestamp.strftime('%d/%m/%Y %H:%M') }}</td>
+                                        <td>
+                                            {% if log.user %}
+                                                {{ log.user.nome or log.user.email }}
+                                            {% else %}
+                                                <span class="text-muted">Sistema</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if 'login' in log.acao|lower %}
+                                                🔐
+                                            {% elif 'logout' in log.acao|lower %}
+                                                🚪
+                                            {% elif 'produção' in log.acao|lower %}
+                                                🥛
+                                            {% elif 'saúde' in log.acao|lower %}
+                                                🏥
+                                            {% elif 'exclu' in log.acao|lower %}
+                                                ❌
+                                            {% else %}
+                                                📝
+                                            {% endif %}
+                                            {{ log.acao }}
+                                        </td>
+                                        <td class="small">{{ log.detalhes[:60] }}{% if log.detalhes|length > 60 %}...{% endif %}</td>
+                                        <td><code>{{ log.ip_address }}</code></td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center p-4 text-muted">
+                        <p>Nenhum log encontrado</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

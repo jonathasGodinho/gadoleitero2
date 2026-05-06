@@ -1,0 +1,761 @@
+{% extends "base.html" %}
+{% block title %}Painel - Terra Roxa System{% endblock %}
+{% block page_title %}Painel de Controle{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Flip Box Cards 3D Animation */
+    .flip-box {
+        perspective: 1000px;
+        height: 100%;
+        cursor: pointer;
+        min-height: 180px;
+    }
+    
+    .flip-box-inner {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        transform-style: preserve-3d;
+    }
+    
+    .flip-box.flipped .flip-box-inner {
+        transform: rotateY(180deg);
+    }
+    
+    @media (min-width: 768px) {
+        .flip-box:hover .flip-box-inner {
+            transform: rotateY(180deg);
+        }
+    }
+    
+    .flip-box-front, .flip-box-back {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+        border-radius: var(--radius-md);
+        overflow: hidden;
+    }
+    
+    .flip-box-front {
+        background: transparent;
+    }
+    
+    .flip-box-back {
+        background: linear-gradient(135deg, var(--navy-dark) 0%, var(--dark-green) 100%);
+        color: white;
+        transform: rotateY(180deg);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        text-align: center;
+    }
+    
+    .flip-box-back h6 {
+        font-size: 0.85rem;
+        opacity: 0.8;
+        margin-bottom: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .flip-box-back .value {
+        font-size: 2rem;
+        font-weight: 800;
+        margin: 0.5rem 0;
+    }
+    
+    .flip-box-back .info {
+        font-size: 0.8rem;
+        opacity: 0.7;
+    }
+    
+    .flip-box-back .icon {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Ajuste para cards de métricas */
+    .card-metric {
+        background: transparent !important;
+        border: none !important;
+    }
+    
+    .card-metric .card-body {
+        padding: 0 !important;
+        position: relative;
+        height: 100%;
+    }
+    
+    /* Mobile: click to flip */
+    @media (max-width: 767.98px) {
+        .flip-box.flipped .flip-box-inner {
+            transform: rotateY(180deg);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Bento Grid Layout - Inspirado no AgroFlow 2025-2026 -->
+<div class="row g-3 g-md-4 mb-4">
+    <!-- Card 1: Produção Hoje - Flip Box -->
+    <div class="col-6 col-md-3">
+        <div class="flip-box" onclick="this.classList.toggle('flipped')">
+            <div class="flip-box-inner">
+                <!-- Frente -->
+                <div class="flip-box-front">
+                    <div class="card card-metric h-100">
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div class="rounded-3 p-2" style="background: rgba(255,255,255,0.2); font-size: 1.5rem;">🥛</div>
+                                <span class="badge bg-white text-success" style="font-size: 0.7rem;">HOJE</span>
+                            </div>
+                            <h6 class="opacity-75 mb-1" style="font-size: 0.85rem;">Produção</h6>
+                            <h2 class="mb-2" style="font-size: 1.8rem; font-weight: 800;">{{ "%.1f"|format(total_litros) }} <small style="font-size: 0.5em; font-weight: 400;">L</small></h2>
+                            <div class="mt-auto">
+                                <small class="opacity-75" style="font-size: 0.8rem;">Clique para detalhes</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Verso -->
+                <div class="flip-box-back">
+                    <div class="icon">🥛</div>
+                    <h6>Preço/Litro</h6>
+                    <div class="value" style="font-size: 1.8rem;">R$ {{ "%.2f"|format(preco_vigente) }}</div>
+                    <div class="info">
+                        <input type="number" step="0.01" class="form-control form-control-sm bg-white bg-opacity-25 text-white border-0 mx-auto" 
+                               style="width: 100px; font-size: 0.8rem; padding: 2px 8px;" 
+                               value="{{ "%.2f"|format(preco_vigente) }}" 
+                               onchange="atualizarPreco(this.value); event.stopPropagation();">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Card 2: Receita - Flip Box -->
+    <div class="col-6 col-md-3">
+        <div class="flip-box" onclick="this.classList.toggle('flipped')">
+            <div class="flip-box-inner">
+                <div class="flip-box-front">
+                    <div class="card h-100" style="background: linear-gradient(135deg, #3498DB 0%, #2980B9 100%); color: white; border: none; height: 100%;">
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div class="rounded-3 p-2" style="background: rgba(255,255,255,0.2); font-size: 1.5rem;">💰</div>
+                                <span class="badge bg-white text-primary" style="font-size: 0.7rem;">RECEITA</span>
+                            </div>
+                            <h6 class="opacity-75 mb-1" style="font-size: 0.85rem;">Receita Hoje</h6>
+                            <h2 class="mb-2" style="font-size: 1.8rem; font-weight: 800;">R$ {{ "%.0f"|format(receita) }}</h2>
+                            <div class="mt-auto">
+                                <small class="opacity-75" style="font-size: 0.8rem;">Clique para detalhes</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flip-box-back" style="background: linear-gradient(135deg, #2980B9 0%, #1C5A7A 100%);">
+                    <div class="icon">💰</div>
+                    <h6>Meta Mensal</h6>
+                    <div class="value">R$ {{ "%.0f"|format(receita_mensal_resumo) }}</div>
+                    <div class="info">Receita acumulada no mês</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Card 3: Custos - Flip Box -->
+    <div class="col-6 col-md-3">
+        <div class="flip-box" onclick="this.classList.toggle('flipped')">
+            <div class="flip-box-inner">
+                <div class="flip-box-front">
+                    <div class="card h-100" style="background: linear-gradient(135deg, #F39C12 0%, #E67E22 100%); color: white; border: none; height: 100%;">
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div class="rounded-3 p-2" style="background: rgba(255,255,255,0.2); font-size: 1.5rem;">📉</div>
+                                <span class="badge bg-white text-warning" style="font-size: 0.7rem;">CUSTO</span>
+                            </div>
+                            <h6 class="opacity-75 mb-1" style="font-size: 0.85rem;">Custo Hoje</h6>
+                            <h2 class="mb-2" style="font-size: 1.8rem; font-weight: 800;">R$ {{ "%.0f"|format(custo) }}</h2>
+                            <div class="mt-auto">
+                                <small class="opacity-75" style="font-size: 0.8rem;">Clique para detalhes</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flip-box-back" style="background: linear-gradient(135deg, #E67E22 0%, #D35400 100%);">
+                    <div class="icon">📉</div>
+                    <h6>Custo Mensal</h6>
+                    <div class="value">R$ {{ "%.0f"|format(custo_mensal if custo_mensal else 0) }}</div>
+                    <div class="info">Inclui ração e despesas</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Card 4: Lucro - Flip Box -->
+    <div class="col-6 col-md-3">
+        <div class="flip-box" onclick="this.classList.toggle('flipped')">
+            <div class="flip-box-inner">
+                <div class="flip-box-front">
+                    <div class="card h-100" style="background: linear-gradient(135deg, #2C3E50 0%, #27AE60 100%); color: white; border: none; height: 100%;">
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div class="rounded-3 p-2" style="background: rgba(255,255,255,0.2); font-size: 1.5rem;">📈</div>
+                                <span class="badge bg-white text-success" style="font-size: 0.7rem;">LUCRO</span>
+                            </div>
+                            <h6 class="opacity-75 mb-1" style="font-size: 0.85rem;">Lucro Hoje</h6>
+                            <h2 class="mb-2" style="font-size: 1.8rem; font-weight: 800;">R$ {{ "%.0f"|format(lucro) }}</h2>
+                            <div class="mt-auto">
+                                <small class="opacity-75" style="font-size: 0.8rem;">Clique para detalhes</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flip-box-back" style="background: linear-gradient(135deg, #27AE60 0%, #1E8449 100%);">
+                    <div class="icon">📈</div>
+                    <h6>Lucro Mensal</h6>
+                    <div class="value">R$ {{ "%.0f"|format(lucro_mensal) }}</div>
+                    <div class="info">Margem: {{ "%.1f"|format((lucro_mensal / receita_mensal_resumo * 100) if receita_mensal_resumo > 0 else 0) }}%</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Segunda Linha: Indicadores -->
+<div class="row g-3 g-md-4 mb-4">
+    <!-- Clima -->
+    <div class="col-12 col-md-4">
+        <div class="card h-100">
+            <div class="card-header bg-transparent d-flex align-items-center gap-2" style="border-bottom: 2px solid var(--border-light);">
+                <span style="font-size: 1.2rem;">🌤️</span>
+                <h5 class="mb-0" style="font-size: 1rem; font-weight: 600;">Clima Atual</h5>
+            </div>
+            <div class="card-body text-center d-flex flex-column justify-content-center" style="min-height: 150px;">
+                <div id="clima-info">
+                    <h3 id="temp-atual" style="font-weight: 700; color: var(--dark-green);">--°C</h3>
+                    <p id="clima-desc" class="mb-1" style="font-size: 0.9rem;">Carregando...</p>
+                    <div class="d-flex justify-content-center gap-3" style="font-size: 0.85rem; color: var(--text-secondary);">
+                        <span>💧 <span id="umidade">--</span>%</span>
+                        <span>🌡️ Sensação: <span id="sensacao">--</span>°C</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Variação Semanal -->
+    <div class="col-6 col-md-4">
+        <div class="card h-100">
+            <div class="card-header bg-transparent d-flex align-items-center gap-2" style="border-bottom: 2px solid var(--border-light);">
+                <span style="font-size: 1.2rem;">📊</span>
+                <h5 class="mb-0" style="font-size: 1rem; font-weight: 600;">Variação Semanal</h5>
+            </div>
+            <div class="card-body text-center d-flex flex-column justify-content-center">
+                <h2 class="{% if variacao_semanal >= 0 %}text-success{% else %}text-danger{% endif %}" style="font-size: 2.5rem; font-weight: 800;">
+                    {{ "%.1f"|format(variacao_semanal) }}%
+                </h2>
+                <small class="text-muted" style="font-size: 0.85rem;">vs semana anterior</small>
+                <div class="mt-2">
+                    <div class="progress" style="height: 6px; background: var(--border-light);">
+                        <div class="progress-bar {% if variacao_semanal >= 0 %}bg-success{% else %}bg-danger{% endif %}" 
+                             style="width: {% if variacao_semanal > 100 %}100{% else %}{{ variacao_semanal|abs }}{% endif %}%;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Eficiência -->
+    <div class="col-6 col-md-4">
+        <div class="card h-100">
+            <div class="card-header bg-transparent d-flex align-items-center gap-2" style="border-bottom: 2px solid var(--border-light);">
+                <span style="font-size: 1.2rem;">🎯</span>
+                <h5 class="mb-0" style="font-size: 1rem; font-weight: 600;">Eficiência Média</h5>
+            </div>
+            <div class="card-body text-center d-flex flex-column justify-content-center">
+                <h2 style="font-size: 2.5rem; font-weight: 800; color: var(--sky-blue);">
+                    {{ "%.2f"|format(media_por_animal) }}
+                </h2>
+                <small class="text-muted" style="font-size: 0.85rem;">litros/animal</small>
+                <div class="mt-2">
+                    <span class="badge bg-success bg-opacity-10 text-success" style="font-size: 0.75rem;">
+                        {{ num_animais_produzindo }} animais ativos
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gráficos Principais: Bento Grid -->
+<div class="row g-3 g-md-4 mb-4" id="dashboard-widgets">
+    <!-- Gráfico Produção -->
+    <div class="col-12 col-lg-8 widget" draggable="true" data-widget="producao">
+        <div class="card h-100">
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center" style="border-bottom: 2px solid var(--border-light);">
+                <div class="d-flex align-items-center gap-2">
+                    <span style="font-size: 1.2rem;">📈</span>
+                    <h5 class="mb-0" style="font-size: 1rem; font-weight: 600;">Produção - Últimos 7 Dias</h5>
+                </div>
+                <button class="btn btn-sm btn-outline-secondary border-0" onclick="toggleWidget('producao')" style="font-size: 0.75rem;">Ocultar</button>
+            </div>
+            <div class="card-body widget-content">
+                <canvas id="chartProducao" style="max-height: 300px;"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Gráfico Custos -->
+    <div class="col-12 col-lg-4 widget" draggable="true" data-widget="custos">
+        <div class="card h-100">
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center" style="border-bottom: 2px solid var(--border-light);">
+                <div class="d-flex align-items-center gap-2">
+                    <span style="font-size: 1.2rem;">💰</span>
+                    <h5 class="mb-0" style="font-size: 1rem; font-weight: 600;">Custos Diários</h5>
+                </div>
+                <button class="btn btn-sm btn-outline-secondary border-0" onclick="toggleWidget('custos')" style="font-size: 0.75rem;">Ocultar</button>
+            </div>
+            <div class="card-body widget-content">
+                <canvas id="chartCustos" style="max-height: 300px;"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Widgets Menores: Bento Grid -->
+<div class="row g-3 g-md-4 mb-4">
+    <!-- Top Animais -->
+    <div class="col-12 col-md-4 widget" draggable="true" data-widget="top-animais">
+        <div class="card h-100">
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center" style="border-bottom: 2px solid var(--border-light);">
+                <div class="d-flex align-items-center gap-2">
+                    <span style="font-size: 1.2rem;">🐂</span>
+                    <h5 class="mb-0" style="font-size: 1rem; font-weight: 600;">Top Produtores</h5>
+                </div>
+                <button class="btn btn-sm btn-outline-secondary border-0" onclick="toggleWidget('top-animais')" style="font-size: 0.75rem;">Ocultar</button>
+            </div>
+            <div class="card-body widget-content p-0">
+                {% if top_animais %}
+                    <div class="list-group list-group-flush">
+                    {% for animal, prod in top_animais %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center border-0" style="border-bottom: 1px solid var(--border-light) !important;">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="rounded-circle d-flex align-items-center justify-content-center" 
+                                     style="width: 36px; height: 36px; background: var(--success-light); color: var(--dark-green); font-weight: 700; font-size: 0.9rem;">
+                                    {{ loop.index }}
+                                </div>
+                                <span style="font-weight: 600; font-size: 0.95rem;">{{ animal }}</span>
+                            </div>
+                            <span class="badge rounded-pill" style="background: var(--success-light); color: var(--dark-green); font-weight: 600;">
+                                {{ "%.1f"|format(prod) }} L
+                            </span>
+                        </div>
+                    {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <span style="font-size: 2rem;">📭</span>
+                        <p class="mb-0 mt-2" style="font-size: 0.9rem;">Nenhuma produção registrada</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Ração Consumida -->
+    <div class="col-12 col-md-4 widget" draggable="true" data-widget="racao">
+        <div class="card h-100">
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center" style="border-bottom: 2px solid var(--border-light);">
+                <div class="d-flex align-items-center gap-2">
+                    <span style="font-size: 1.2rem;">🌾</span>
+                    <h5 class="mb-0" style="font-size: 1rem; font-weight: 600;">Consumo de Ração</h5>
+                </div>
+                <button class="btn btn-sm btn-outline-secondary border-0" onclick="toggleWidget('racao')" style="font-size: 0.75rem;">Ocultar</button>
+            </div>
+            <div class="card-body widget-content p-0">
+                {% if racao_consumo %}
+                    <div class="list-group list-group-flush">
+                    {% for tipo, qtd in racao_consumo.items() %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center border-0" style="border-bottom: 1px solid var(--border-light) !important;">
+                            <span style="font-weight: 500; font-size: 0.95rem;">{{ tipo }}</span>
+                            <span class="badge rounded-pill" style="background: var(--warning-light); color: var(--earth-brown); font-weight: 600;">
+                                {{ "%.1f"|format(qtd) }} kg
+                            </span>
+                        </div>
+                    {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <span style="font-size: 2rem;">🌾</span>
+                        <p class="mb-0 mt-2" style="font-size: 0.9rem;">Nenhum consumo registrado</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Alertas de Saúde -->
+    <div class="col-12 col-md-4 widget" draggable="true" data-widget="alertas">
+        <div class="card h-100">
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center" style="border-bottom: 2px solid var(--border-light);">
+                <div class="d-flex align-items-center gap-2">
+                    <span style="font-size: 1.2rem;">⚠️</span>
+                    <h5 class="mb-0" style="font-size: 1rem; font-weight: 600;">Alertas de Saúde</h5>
+                </div>
+                <button class="btn btn-sm btn-outline-secondary border-0" onclick="toggleWidget('alertas')" style="font-size: 0.75rem;">Ocultar</button>
+            </div>
+            <div class="card-body widget-content p-0">
+                {% if alertas_saude %}
+                    <div class="list-group list-group-flush">
+                    {% for alerta in alertas_saude %}
+                        <div class="list-group-item border-0" style="border-bottom: 1px solid var(--border-light) !important;">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong style="font-size: 0.95rem;">{{ alerta.animal.nome }}</strong>
+                                    <br>
+                                    <small class="text-muted" style="font-size: 0.8rem;">{{ alerta.tipo }}</small>
+                                </div>
+                                <span class="badge bg-warning bg-opacity-25 text-warning" style="font-size: 0.75rem;">
+                                    {{ alerta.data_aplicacao.strftime('%d/%m') }}
+                                </span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <span style="font-size: 2rem;">✅</span>
+                        <p class="mb-0 mt-2" style="font-size: 0.9rem;">Nenhum alerta pendente</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Resumo Executivo -->
+<div class="row g-3 g-md-4 mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-transparent" style="border-bottom: 2px solid var(--border-light);">
+                <div class="d-flex align-items-center gap-2">
+                    <span style="font-size: 1.2rem;">📝</span>
+                    <h5 class="mb-0" style="font-size: 1rem; font-weight: 600;">Resumo Executivo</h5>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row g-4">
+                    <div class="col-md-3">
+                        <div class="p-3 rounded-3" style="background: var(--success-light);">
+                            <h6 class="text-muted mb-2" style="font-size: 0.85rem;">Custo de Produção</h6>
+                            <p class="h3 mb-1" style="color: var(--dark-green); font-weight: 700;">R$ {{ "%.2f"|format(custo_producao) }}</p>
+                            <small class="text-muted" style="font-size: 0.8rem;">por litro hoje</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 rounded-3" style="background: var(--warning-light);">
+                            <h6 class="text-muted mb-2" style="font-size: 0.85rem;">Produção Total</h6>
+                            <p class="h3 mb-1" style="color: var(--earth-brown); font-weight: 700;">{{ "%.0f"|format(total_litros) }} L</p>
+                            <small class="text-muted" style="font-size: 0.8rem;">hoje</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 rounded-3" style="background: rgba(52, 152, 219, 0.1);">
+                            <h6 class="text-muted mb-2" style="font-size: 0.85rem;">Receita Mensal</h6>
+                            <p class="h3 mb-1" style="color: var(--sky-blue); font-weight: 700;">R$ {{ "%.0f"|format(receita_mensal_resumo) }}</p>
+                            <small class="text-muted" style="font-size: 0.8rem;">acumulado</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 rounded-3" style="background: rgba(155, 89, 182, 0.1);">
+                            <h6 class="text-muted mb-2" style="font-size: 0.85rem;">Total Animais</h6>
+                            <p class="h3 mb-1" style="color: #9B59B6; font-weight: 700;">{{ total_animais }}</p>
+                            <small class="text-muted" style="font-size: 0.8rem;">cadastrados</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    // Cores da nova paleta
+    const colors = {
+        green: '#2ECC71',
+        darkGreen: '#27AE60',
+        emerald: '#40A190',
+        gold: '#F1C40F',
+        blue: '#3498DB',
+        navy: '#2C3E50',
+        danger: '#E74C3C'
+    };
+
+    // Gráfico Produção - Estilo Moderno (inspirado no AgroFlow)
+    const ctxProducao = document.getElementById('chartProducao').getContext('2d');
+    new Chart(ctxProducao, {
+        type: 'line',
+        data: {
+            labels: {{ dias|tojson }},
+            datasets: [{
+                label: 'Produção (L)',
+                data: {{ valores_producao|tojson }},
+                borderColor: colors.darkGreen,
+                backgroundColor: function(context) {
+                    const chart = context.chart;
+                    const {ctx, chartArea} = chart;
+                    if (!chartArea) return 'rgba(46, 204, 113, 0.1)';
+                    const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+                    gradient.addColorStop(0, 'rgba(46, 204, 113, 0.0)');
+                    gradient.addColorStop(1, 'rgba(46, 204, 113, 0.3)');
+                    return gradient;
+                },
+                fill: true,
+                tension: 0.4,
+                borderWidth: 3,
+                pointBackgroundColor: colors.darkGreen,
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 4,
+                pointHoverRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(44, 62, 80, 0.9)',
+                    padding: 12,
+                    cornerRadius: 8,
+                    titleFont: { size: 13, weight: '600' },
+                    bodyFont: { size: 12 },
+                    callbacks: {
+                        label: function(context) {
+                            return '🥛 ' + context.parsed.y.toFixed(1) + ' L';
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: { 
+                    beginAtZero: true,
+                    grid: { color: 'rgba(0,0,0,0.05)' },
+                    ticks: { font: { size: 11 } }
+                },
+                x: {
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+    
+    // Gráfico Custos - Estilo Moderno
+    const ctxCustos = document.getElementById('chartCustos').getContext('2d');
+    new Chart(ctxCustos, {
+        type: 'bar',
+        data: {
+            labels: {{ dias|tojson }},
+            datasets: [{
+                label: 'Custo (R$)',
+                data: {{ custos_dia|tojson }},
+                backgroundColor: function(context) {
+                    const chart = context.chart;
+                    const {ctx, chartArea} = chart;
+                    if (!chartArea) return colors.gold;
+                    const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+                    gradient.addColorStop(0, 'rgba(241, 196, 15, 0.6)');
+                    gradient.addColorStop(1, 'rgba(241, 196, 15, 1)');
+                    return gradient;
+                },
+                borderRadius: 6,
+                borderSkipped: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(44, 62, 80, 0.9)',
+                    padding: 12,
+                    cornerRadius: 8,
+                    callbacks: {
+                        label: function(context) {
+                            return '💰 R$ ' + context.parsed.y.toFixed(2);
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: { 
+                    beginAtZero: true,
+                    grid: { color: 'rgba(0,0,0,0.05)' },
+                    ticks: { font: { size: 11 } }
+                },
+                x: {
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+
+    // Dashboard Widgets - Drag and Drop com animação
+    let draggedWidget = null;
+
+    document.querySelectorAll('.widget').forEach(widget => {
+        widget.addEventListener('dragstart', function(e) {
+            draggedWidget = this;
+            this.style.opacity = '0.4';
+            this.style.transform = 'scale(0.98)';
+        });
+        
+        widget.addEventListener('dragend', function() {
+            this.style.opacity = '1';
+            this.style.transform = 'scale(1)';
+        });
+        
+        widget.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            this.style.borderLeft = '3px solid ' + colors.darkGreen;
+        });
+        
+        widget.addEventListener('dragleave', function() {
+            this.style.borderLeft = 'none';
+        });
+        
+        widget.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.style.borderLeft = 'none';
+            if (draggedWidget !== this) {
+                const allWidgets = Array.from(document.querySelectorAll('.widget'));
+                const draggedIndex = allWidgets.indexOf(draggedWidget);
+                const targetIndex = allWidgets.indexOf(this);
+                
+                if (draggedIndex < targetIndex) {
+                    this.after(draggedWidget);
+                } else {
+                    this.before(draggedWidget);
+                }
+                
+                saveWidgetOrder();
+            }
+        });
+    });
+
+    function toggleWidget(name) {
+        const widget = document.querySelector(`[data-widget="${name}"] .widget-content`);
+        const button = document.querySelector(`[data-widget="${name}"] button`);
+        if (widget.style.display === 'none') {
+            widget.style.display = 'block';
+            widget.style.animation = 'slideInUp 0.3s ease';
+            if(button) button.textContent = 'Ocultar';
+        } else {
+            widget.style.display = 'none';
+            if(button) button.textContent = 'Mostrar';
+        }
+        saveWidgetVisibility();
+    }
+
+    function saveWidgetOrder() {
+        const order = Array.from(document.querySelectorAll('.widget')).map(w => w.dataset.widget);
+        localStorage.setItem('widgetOrder', JSON.stringify(order));
+    }
+
+    function saveWidgetVisibility() {
+        const visibility = {};
+        document.querySelectorAll('.widget').forEach(w => {
+            const content = w.querySelector('.widget-content');
+            visibility[w.dataset.widget] = content.style.display !== 'none';
+        });
+        localStorage.setItem('widgetVisibility', JSON.stringify(visibility));
+    }
+
+    // Carregar preferências salvas
+    window.addEventListener('load', function() {
+        const savedOrder = localStorage.getItem('widgetOrder');
+        if (savedOrder) {
+            const order = JSON.parse(savedOrder);
+            const containers = document.querySelectorAll('[id$="-widgets"], .row:has([data-widget])');
+            containers.forEach(container => {
+                order.forEach(widgetName => {
+                    const widget = document.querySelector(`[data-widget="${widgetName}"]`);
+                    if (widget && widget.parentElement === container) {
+                        container.appendChild(widget);
+                    }
+                });
+            });
+        }
+        
+        const savedVisibility = localStorage.getItem('widgetVisibility');
+        if (savedVisibility) {
+            const visibility = JSON.parse(savedVisibility);
+            Object.keys(visibility).forEach(widgetName => {
+                if (!visibility[widgetName]) {
+                    const widget = document.querySelector(`[data-widget="${widgetName}"] .widget-content`);
+                    const button = document.querySelector(`[data-widget="${widgetName}"] button`);
+                    if (widget) widget.style.display = 'none';
+                    if (button) button.textContent = 'Mostrar';
+                }
+            });
+        }
+    });
+
+    // Weather API - Atualizado com mais informações
+    fetch('/api/clima')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('temp-atual').textContent = data.temp.toFixed(1) + '°C';
+            document.getElementById('clima-desc').textContent = data.description;
+            document.getElementById('umidade').textContent = data.humidity;
+            if (document.getElementById('sensacao')) {
+                document.getElementById('sensacao').textContent = (data.feels_like || data.temp).toFixed(1);
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao buscar clima:', error);
+            document.getElementById('temp-atual').textContent = '25.0°C';
+            document.getElementById('clima-desc').textContent = 'Ensolarado';
+            document.getElementById('umidade').textContent = '60';
+        });
+    
+    // Atualizar preço do leite com feedback visual
+    function atualizarPreco(novoPreco) {
+        if (!novoPreco || novoPreco <= 0) {
+            alert('Digite um valor válido!');
+            return;
+        }
+        fetch('/api/atualizar-preco', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ preco: novoPreco })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erro ao atualizar preço: ' + (data.error || 'Erro desconhecido'));
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao comunicar com o servidor');
+        });
+    }
+</script>
+{% endblock %}

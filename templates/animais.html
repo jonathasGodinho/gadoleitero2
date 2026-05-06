@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block title %}Animais - Terra Roxa System{% endblock %}
+{% block page_title %}🐂 Cadastro de Animais{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-12 col-md-4">
+        <div class="card">
+            <div class="card-header bg-transparent">
+                <h5 class="mb-0">➕ Novo Animal</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Nome</label>
+                        <input type="text" name="nome" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Brinco (ID)</label>
+                        <input type="text" name="brinco" class="form-control" required>
+                    </div>
+                <div class="mb-3">
+                    <label class="form-label">Raça</label>
+                    <input type="text" name="raca" class="form-control" placeholder="Ex: Holandesa, Nelore, etc.">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Filhote</label>
+                    <input type="text" name="lote" class="form-control" placeholder="Ex: Filhote A">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Sexo</label>
+                    <select name="sexo" class="form-control" required>
+                        <option value="">Selecione...</option>
+                        <option value="macho">♂️ Macho</option>
+                        <option value="femea">♀️ Fêmea</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Data de Nascimento</label>
+                    <input type="date" name="data_nascimento" class="form-control">
+                </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="ativo" id="ativo" checked>
+                        <label class="form-check-label" for="ativo">Animal ativo</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Cadastrar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-8">
+        <div class="card">
+            <div class="card-header bg-transparent">
+                <h5 class="mb-0">📋 Animais Cadastrados</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Brinco</th>
+                                <th>Nome</th>
+                            <th>Raça</th>
+                            <th>Filhote</th>
+                            <th>Sexo</th>
+                            <th>Nascimento</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for animal in animais %}
+                            <tr>
+                                <td>{{ animal.brinco }}</td>
+                                <td>{{ animal.nome }}</td>
+                                <td>{{ animal.raca or '-' }}</td>
+                                <td>{{ animal.lote or '-' }}</td>
+                                <td>
+                                    {% if animal.sexo == 'macho' %}
+                                        <span class="badge bg-primary">♂ Macho</span>
+                                    {% elif animal.sexo == 'femea' %}
+                                        <span class="badge bg-danger">♀ Fêmea</span>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>{{ animal.data_nascimento.strftime('%d/%m/%Y') if animal.data_nascimento else '-' }}</td>
+                                <td>
+                                    {% if animal.ativo %}
+                                    <span class="badge bg-success">Ativo</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Inativo</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editModal{{ animal.id }}">✏️</button>
+                                    <a href="/animais/excluir/{{ animal.id }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Excluir animal?')">✕</a>
+                                </td>
+                            </tr>
+                            <div class="modal fade" id="editModal{{ animal.id }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Editar {{ animal.nome }}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <form method="POST" action="/animais/editar/{{ animal.id }}">
+                                            <div class="modal-body">
+                                                <div class="mb-2">
+                                                    <label class="form-label">Nome</label>
+                                                    <input type="text" name="nome" class="form-control" value="{{ animal.nome }}" required>
+                                                </div>
+                                                <div class="mb-2">
+                                                    <label class="form-label">Brinco</label>
+                                                    <input type="text" name="brinco" class="form-control" value="{{ animal.brinco }}" required>
+                                                </div>
+                                                <div class="mb-2">
+                                                    <label class="form-label">Raça</label>
+                                                    <select name="raca" class="form-control">
+                                                        <option value="">Selecione...</option>
+                                                        <option value="Holandesa" {% if animal.raca == 'Holandesa' %}selected{% endif %}>Holandesa (Leiteira)</option>
+                                                        <option value="Jersey" {% if animal.raca == 'Jersey' %}selected{% endif %}>Jersey (Leiteira)</option>
+                                                        <option value="Girolando" {% if animal.raca == 'Girolando' %}selected{% endif %}>Girolando (Leiteira)</option>
+                                                        <option value="Nelore" {% if animal.raca == 'Nelore' %}selected{% endif %}>Nelore (Corte)</option>
+                                                        <option value="Guzerá" {% if animal.raca == 'Guzerá' %}selected{% endif %}>Guzerá (Corte)</option>
+                                                        <option value="Brahman" {% if animal.raca == 'Brahman' %}selected{% endif %}>Brahman (Corte)</option>
+                                                        <option value="Mestiço" {% if animal.raca == 'Mestiço' %}selected{% endif %}>Mestiço</option>
+                                                    </select>
+                                                </div>
+                                                <div class="mb-2">
+                                                    <label class="form-label">Sexo</label>
+                                                    <select name="sexo" class="form-control" required>
+                                                        <option value="">Selecione...</option>
+                                                        <option value="macho" {% if animal.sexo == 'macho' %}selected{% endif %}>♂️ Macho</option>
+                                                        <option value="femea" {% if animal.sexo == 'femea' %}selected{% endif %}>♀️ Fêmea</option>
+                                                    </select>
+                                                </div>
+                                                <div class="mb-2">
+                                                    <label class="form-label">Filhote</label>
+                                                    <input type="text" name="lote" class="form-control" value="{{ animal.lote or '' }}" placeholder="Ex: Filhote A">
+                                                </div>
+                                                <div class="mb-2">
+                                                    <label class="form-label">Data Nascimento</label>
+                                                    <input type="date" name="data_nascimento" class="form-control" value="{{ animal.data_nascimento.strftime('%Y-%m-%d') if animal.data_nascimento else '' }}">
+                                                </div>
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="ativo" id="ativo{{ animal.id }}" {% if animal.ativo %}checked{% endif %}>
+                                                    <label class="form-check-label" for="ativo{{ animal.id }}">Animal ativo</label>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                <button type="submit" class="btn btn-primary">Salvar</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-4">Nenhum animal cadastrado</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

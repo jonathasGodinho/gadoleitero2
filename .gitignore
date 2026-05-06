@@ -1,0 +1,29 @@
+# Banco de dados
+*.db
+instance/
+__pycache__/
+*.pyc
+
+# Ambiente virtual
+venv/
+env/
+.venv/
+
+# Arquivos do sistema
+.DS_Store
+Thumbs.db
+error.txt
+output.txt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Arquivos temporários
+*.sql
+backup_*.sql

@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Produção - Terra Roxa System{% endblock %}
+{% block page_title %}🥛 Registro de Produção{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-transparent">
+                <h5 class="mb-0">➕ Nova Produção</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Animal</label>
+                        <select name="animal_id" class="form-select" required>
+                            <option value="">Selecione...</option>
+                            {% for animal in animais %}
+                            <option value="{{ animal.id }}">{{ animal.nome }} ({{ animal.brinco }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Quantidade (litros)</label>
+                        <input type="number" step="0.01" name="litros" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Preço de Venda (R$/litro)</label>
+                        <input type="number" step="0.0001" name="preco_venda" class="form-control" placeholder="Deixe vazio para usar preço vigente">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Data</label>
+                        <input type="date" name="data" class="form-control" value="{{ today }}" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Registrar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">📋 Histórico de Produção</h5>
+                <form method="GET" class="d-flex gap-2">
+                    <input type="date" name="data_ini" class="form-control form-control-sm" placeholder="De">
+                    <input type="date" name="data_fim" class="form-control form-control-sm" placeholder="Até">
+                    <select name="animal_id" class="form-select form-select-sm">
+                        <option value="">Todos animais</option>
+                        {% for animal in animais %}
+                        <option value="{{ animal.id }}">{{ animal.nome }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-sm btn-outline-primary">Filtrar</button>
+                </form>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Animal</th>
+                                <th>Litros</th>
+                                <th>Preço/L</th>
+                                <th>Valor Total</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in producoes %}
+                            <tr>
+                                <td>{{ p.data.strftime('%d/%m/%Y') }}</td>
+                                <td>{{ p.animal.nome }} ({{ p.animal.brinco }})</td>
+                                <td>{{ "%.2f"|format(p.litros) }} L</td>
+                                <td>R$ {{ "%.2f"|format(float(p.preco_venda) if p.preco_venda else float(get_preco_vigente(p.data))) }}</td>
+                                <td>R$ {{ "%.2f"|format(float(p.litros) * float(p.preco_venda if p.preco_venda else get_preco_vigente(p.data))) }}</td>
+                                <td>
+                                    <a href="/producao/excluir/{{ p.id }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Excluir?')">✕</a>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">Nenhuma produção registrada</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+    // Any production-specific JavaScript can go here
+</script>
+{% endblock %}

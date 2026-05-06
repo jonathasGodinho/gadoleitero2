@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: terra-roxa-system
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn run:app"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: FLASK_APP
+        value: run.py
+    healthCheckPath: /login
+    
+  - type: psql
+    name: terra-roxa-db
+    databaseName: gadoleiteiro
+    user: admin
+    plan: free

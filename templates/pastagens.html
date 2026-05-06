@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Pastagens - Terra Roxa System{% endblock %}
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 style="color: #2C3E50;">🌱 Gestão de Pastagens</h2>
+                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#novaPastagemModal">
+                    ➕ Nova Pastagem
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Pastagens -->
+    <div class="card">
+        <div class="card-header" style="background-color: #27AE60; color: white;">
+            <h5 class="mb-0">📋 Pastagens Cadastradas</h5>
+        </div>
+        <div class="card-body">
+            {% if pastagens %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Lote</th>
+                            <th>Área (ha)</th>
+                            <th>Tipo Forrageira</th>
+                            <th>Data Plantio</th>
+                            <th>Última Rotação</th>
+                            <th>Fertilização</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in pastagens %}
+                        <tr>
+                            <td><strong>{{ p.lote }}</strong></td>
+                            <td>{{ p.area_ha }}</td>
+                            <td>{{ p.tipo_forrageira or '-' }}</td>
+                            <td>{{ p.data_plantio.strftime('%d/%m/%Y') if p.data_plantio else '-' }}</td>
+                            <td>{{ p.data_rotacao.strftime('%d/%m/%Y') if p.data_rotacao else '-' }}</td>
+                            <td>{{ p.fertilizacao or '-' }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-danger">Excluir</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted text-center py-4">Nenhuma pastagem cadastrada ainda.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nova Pastagem -->
+<div class="modal fade" id="novaPastagemModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color: #27AE60; color: white;">
+                <h5 class="modal-title">➕ Nova Pastagem</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Lote</label>
+                        <input type="text" name="lote" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Área (ha)</label>
+                        <input type="number" step="0.01" name="area_ha" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tipo Forrageira</label>
+                        <select name="tipo_forrageira" class="form-control">
+                            <option value="Braquiária">Braquiária</option>
+                            <option value="Tifton 85">Tifton 85</option>
+                            <option value="Mombaça">Mombaça</option>
+                            <option value="Piatã">Piatã</option>
+                            <option value="Outra">Outra</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Data Plantio</label>
+                        <input type="date" name="data_plantio" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Fertilização</label>
+                        <input type="text" name="fertilizacao" class="form-control" placeholder="Ex: 200kg/ha NPK 10-10-10">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

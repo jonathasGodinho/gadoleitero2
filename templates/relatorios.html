@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Relatórios - Terra Roxa System{% endblock %}
+{% block page_title %}📈 Relatórios{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+    <div class="card-header bg-transparent">
+        <h5 class="mb-0">🔍 Filtros</h5>
+    </div>
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Data Inicial</label>
+                <input type="date" name="data_ini" class="form-control" value="{{ data_ini }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Data Final</label>
+                <input type="date" name="data_fim" class="form-control" value="{{ data_fim }}">
+            </div>
+            <div class="col-md-4 d-flex align-items-end gap-2">
+                <button type="submit" class="btn btn-primary">Filtrar</button>
+                <a href="/relatorios/exportar?data_ini={{ data_ini }}&data_fim={{ data_fim }}" class="btn btn-success">📥 Exportar Excel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card card-metric">
+            <div class="card-body">
+                <h6 class="opacity-75">🥛 Total Produção</h6>
+                <h2 class="h4">{{ "%.2f"|format(total_litros) }}</h2>
+                <small>litros</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card card-metric" style="background: linear-gradient(135deg, #3498DB 0%, #2980B9 100%);">
+            <div class="card-body">
+                <h6 class="opacity-75">💰 Receita</h6>
+                <h2 class="h4">R$ {{ "%.2f"|format(receita) }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card card-metric" style="background: linear-gradient(135deg, #F1C40F 0%, #F39C12 100%);">
+            <div class="card-body">
+                <h6 class="opacity-75">📉 Custo</h6>
+                <h2 class="h4">R$ {{ "%.2f"|format(custo) }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card card-metric" style="background: linear-gradient(135deg, #2C3E50 0%, #27AE60 100%);">
+            <div class="card-body">
+                <h6 class="opacity-75">📈 Lucro</h6>
+                <h2 class="h4">R$ {{ "%.2f"|format(lucro) }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-12 col-md-8">
+        <div class="card">
+            <div class="card-header bg-transparent">
+                <h5 class="mb-0">📊 Produção Diária</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="chartProducao"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-4">
+        <div class="card">
+            <div class="card-header bg-transparent">
+                <h5 class="mb-0">📊 Custo por Tipo de Ração</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="chartCusto"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mt-2">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-transparent">
+                <h5 class="mb-0">💰 Lucro Diário</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="chartLucro"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+new Chart(document.getElementById('chartProducao').getContext('2d'), {
+    type: 'bar',
+    data: {
+        labels: {{ dias_grafico|tojson }},
+        datasets: [{
+            label: 'Litros',
+            data: {{ valores_prod|tojson }},
+            backgroundColor: '#27AE60'
+        }]
+    },
+    options: { responsive: true, scales: { y: { beginAtZero: true } } }
+});
+
+new Chart(document.getElementById('chartCusto').getContext('2d'), {
+    type: 'doughnut',
+    data: {
+        labels: {{ custo_por_tipo.keys()|list|tojson }},
+        datasets: [{
+            data: {{ custo_por_tipo.values()|list|tojson }},
+            backgroundColor: ['#2C3E50', '#27AE60', '#1E8449', '#6E4F32', '#F1C40F']
+        }]
+    },
+    options: { responsive: true }
+});
+
+const lucroData = [];
+{% for i in range(valores_prod|length) %}
+lucroData.push({{ valores_prod[i] }} * 2.5 - {{ custos_dia[i] }});
+{% endfor %}
+
+new Chart(document.getElementById('chartLucro').getContext('2d'), {
+    type: 'line',
+    data: {
+        labels: {{ dias_grafico|tojson }},
+        datasets: [{
+            label: 'Lucro (R$)',
+            data: lucroData,
+            borderColor: '#F1C40F',
+            backgroundColor: 'rgba(241, 196, 15, 0.2)',
+            fill: true,
+            tension: 0.4
+        }]
+    },
+    options: { responsive: true }
+});
+</script>
+{% endblock %}

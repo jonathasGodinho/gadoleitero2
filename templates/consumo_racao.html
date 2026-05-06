@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Consumo de Ração - Terra Roxa System{% endblock %}
+{% block page_title %}🌾 Registro de Consumo de Ração{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-12 col-md-4">
+        <div class="card">
+            <div class="card-header bg-transparent">
+                <h5 class="mb-0">➕ Novo Registro</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Animal</label>
+                        <select name="animal_id" class="form-select" required>
+                            <option value="">Selecione...</option>
+                            {% for animal in animais %}
+                            <option value="{{ animal.id }}">{{ animal.nome }} ({{ animal.brinco }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tipo de Ração</label>
+                        <select name="tipo_racao_id" class="form-select" required>
+                            <option value="">Selecione...</option>
+                            {% for tipo in tipos %}
+                            <option value="{{ tipo.id }}">{{ tipo.nome }} (R$ {{ "%.2f"|format(tipo.preco_kg) }}/kg)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Quantidade (kg)</label>
+                        <input type="number" step="0.01" name="quantidade_kg" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Data</label>
+                        <input type="date" name="data" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Registrar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-8">
+        <div class="card">
+            <div class="card-header bg-transparent">
+                <h5 class="mb-0">📋 Histórico de Consumo</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Animal</th>
+                                <th>Ração</th>
+                                <th>Qtd (kg)</th>
+                                <th>Custo</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in consumos %}
+                            <tr>
+                                <td>{{ c.data.strftime('%d/%m/%Y') }}</td>
+                                <td>{{ c.animal.nome }}</td>
+                                <td>{{ c.tipo_racao.nome }}</td>
+                                <td>{{ "%.2f"|format(c.quantidade_kg) }} kg</td>
+                                <td>R$ {{ "%.2f"|format(c.custo) }}</td>
+                                <td>
+                                    <a href="/racao/consumo/excluir/{{ c.id }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Excluir?')">✕</a>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">Nenhum registro encontrado</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

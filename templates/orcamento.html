@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}Orçamento - Terra Roxa System{% endblock %}
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 style="color: #2C3E50;">📊 Orçamento Anual</h2>
+                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#novoOrcamentoModal">
+                    ➕ Novo Orçamento
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resumo -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Total Previsto</h6>
+                    <h3>R$ {{ "%.2f"|format(total_previsto) }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Total Realizado</h6>
+                    <h3>R$ {{ "%.2f"|format(total_realizado) }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Diferença</h6>
+                    <h3>R$ {{ "%.2f"|format(total_realizado - total_previsto) }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela de Orçamentos -->
+    <div class="card">
+        <div class="card-header" style="background-color: #2C3E50; color: white;">
+            <h5 class="mb-0">📋 Orçamentos por Categoria</h5>
+        </div>
+        <div class="card-body">
+            {% if orcamentos %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Ano</th>
+                            <th>Mês</th>
+                            <th>Categoria</th>
+                            <th>Previsto</th>
+                            <th>Realizado</th>
+                            <th>Diferença</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for o in orcamentos %}
+                        <tr>
+                            <td>{{ o.ano }}</td>
+                            <td>{{ o.mes }}</td>
+                            <td><span class="badge bg-info">{{ o.categoria }}</span></td>
+                            <td>R$ {{ "%.2f"|format(o.valor_previsto) }}</td>
+                            <td>R$ {{ "%.2f"|format(o.valor_realizado) }}</td>
+                            <td>
+                                {% set diff = o.valor_realizado - o.valor_previsto %}
+                                <span class="{% if diff >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                    R$ {{ "%.2f"|format(diff) }}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-danger">Excluir</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted text-center py-4">Nenhum orçamento cadastrado ainda.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal Novo Orçamento -->
+<div class="modal fade" id="novoOrcamentoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color: #27AE60; color: white;">
+                <h5 class="modal-title">➕ Novo Orçamento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="/orcamento/novo">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Ano</label>
+                        <input type="number" name="ano" class="form-control" value="{{ today.year }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Mês</label>
+                        <select name="mes" class="form-control" required>
+                            <option value="1">Janeiro</option>
+                            <option value="2">Fevereiro</option>
+                            <option value="3">Março</option>
+                            <option value="4">Abril</option>
+                            <option value="5">Maio</option>
+                            <option value="6">Junho</option>
+                            <option value="7">Julho</option>
+                            <option value="8">Agosto</option>
+                            <option value="9">Setembro</option>
+                            <option value="10">Outubro</option>
+                            <option value="11">Novembro</option>
+                            <option value="12">Dezembro</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Categoria</label>
+                        <select name="categoria" class="form-control" required>
+                            <option value="ração">Ração</option>
+                            <option value="saúde">Saúde</option>
+                            <option value="manutenção">Manutenção</option>
+                            <option value="energia">Energia</option>
+                            <option value="mão de obra">Mão de Obra</option>
+                            <option value="outros">Outros</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Valor Previsto (R$)</label>
+                        <input type="number" step="0.01" name="valor_previsto" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Valor Realizado (R$)</label>
+                        <input type="number" step="0.01" name="valor_realizado" class="form-control" value="0">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

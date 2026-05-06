@@ -1,0 +1,1140 @@
+"""
+Terra Roxa System - Sistema Completo de Gestão de Fazenda Leiteira
+"""
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file, session, jsonify, make_response
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from flask_migrate import Migrate
+from datetime import datetime, date, timedelta
+from io import BytesIO
+import calendar
+import os
+
+app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET_KEY', 'terra-roxa-sistema-2024')
+
+# Configuração de banco: PostgreSQL (produção) ou SQLite (desenvolvimento)
+database_url = os.environ.get('DATABASE_URL')
+if database_url:
+    # Render/Heroku usam postgres:// mas SQLAlchemy precisa de postgresql://
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+else:
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///gadoleiteiro.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+migrate = Migrate(app, db)
+login_manager = LoginManager(app)
+login_manager.login_view = 'login'
+
+# ========== MODELOS ==========
+
+class User(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(150), unique=True, nullable=False)
+    nome = db.Column(db.String(150))
+    senha_hash = db.Column(db.String(500))
+    is_admin = db.Column(db.Boolean, default=False)
+    role = db.Column(db.String(50), default='operador')  # admin, gerente, operador, visualizador
+    ativo = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class AuditLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    acao = db.Column(db.String(200))
+    detalhes = db.Column(db.Text)
+    ip_address = db.Column(db.String(50))
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    user = db.relationship('User', backref='logs')
+
+class Animal(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(100), nullable=False)
+    brinco = db.Column(db.String(50), unique=True, nullable=False)
+    raca = db.Column(db.String(100))
+    sexo = db.Column(db.String(10))  # macho, femea
+    lote = db.Column(db.String(50))  # filhote
+    data_nascimento = db.Column(db.Date)
+    ativo = db.Column(db.Boolean, default=True)
+    # Reprodução
+    data_ultima_inseminacao = db.Column(db.Date)
+    data_parto_prevista = db.Column(db.Date)
+    status_reproducao = db.Column(db.String(50), default='vazio')  # vazio, prenha, seca, etc.
+    # Pastagem
+    lote_pastagem = db.Column(db.String(50))
+    rotacao_pastagem = db.Column(db.String(100))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class SaudeAnimal(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    animal_id = db.Column(db.Integer, db.ForeignKey('animal.id'), nullable=False)
+    tipo = db.Column(db.String(100))  # vacinação, vermifugação, doença, etc.
+    descricao = db.Column(db.Text)
+    data_aplicacao = db.Column(db.Date, nullable=False)
+    proxima_dose = db.Column(db.Date)
+    custo = db.Column(db.Numeric(10, 2))
+    observacoes = db.Column(db.Text)
+    animal = db.relationship('Animal', backref='saude_registros')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Pastagem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    lote = db.Column(db.String(50), nullable=False)
+    area_ha = db.Column(db.Numeric(10, 2))
+    tipo_forrageira = db.Column(db.String(100))
+    data_plantio = db.Column(db.Date)
+    data_rotacao = db.Column(db.Date)
+    fertilizacao = db.Column(db.String(200))
+    observacoes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class TipoRacao(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(100), nullable=False)
+    preco_kg = db.Column(db.Numeric(10, 2), nullable=False)
+    tipo = db.Column(db.String(50), default='concentrado')  # concentrado, volumoso, suplementar
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class ProducaoLeite(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    animal_id = db.Column(db.Integer, db.ForeignKey('animal.id'), nullable=False)
+    litros = db.Column(db.Numeric(10, 2), nullable=False)
+    gordura = db.Column(db.Numeric(5, 2))  # % gordura
+    proteina = db.Column(db.Numeric(5, 2))  # % proteína
+    ccs = db.Column(db.Numeric(10, 2))  # Contagem de Células Somáticas
+    preco_venda = db.Column(db.Numeric(10, 4))
+    data = db.Column(db.Date, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    animal = db.relationship('Animal', backref='producoes')
+
+class ConsumoRacao(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    animal_id = db.Column(db.Integer, db.ForeignKey('animal.id'), nullable=False)
+    tipo_racao_id = db.Column(db.Integer, db.ForeignKey('tipo_racao.id'), nullable=False)
+    quantidade_kg = db.Column(db.Numeric(10, 2), nullable=False)
+    data = db.Column(db.Date, nullable=False)
+    custo = db.Column(db.Numeric(10, 2), nullable=False)
+    eficiencia = db.Column(db.Numeric(10, 4))  # litros/kg ração
+    animal = db.relationship('Animal', backref='consumos')
+    tipo_racao = db.relationship('TipoRacao', backref='consumos')
+
+class PrecoLeite(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    preco_litro = db.Column(db.Numeric(10, 4), nullable=False)
+    data_vigencia = db.Column(db.Date, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Despesa(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    descricao = db.Column(db.String(200), nullable=False)
+    valor = db.Column(db.Numeric(10, 2), nullable=False)
+    categoria = db.Column(db.String(50))  # racao, energia, pessoal, veterinario, etc.
+    data = db.Column(db.Date, nullable=False)
+    observacoes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Orcamento(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    ano = db.Column(db.Integer, nullable=False)
+    mes = db.Column(db.Integer, nullable=False)
+    categoria = db.Column(db.String(50))
+    valor_previsto = db.Column(db.Numeric(10, 2))
+    valor_realizado = db.Column(db.Numeric(10, 2))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+# ========== FUNÇÕES AUXILIARES ==========
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+@app.context_processor
+def inject_cotacao():
+    hoje = date.today()
+    preco = get_preco_vigente(hoje)
+    data_fmt = hoje.strftime('%d/%m/%Y')
+    return dict(preco_vigente_global=preco, data_cotacao_global=data_fmt)
+
+def log_auditoria(acao, detalhes='', user_id=None):
+    if user_id is None and current_user.is_authenticated:
+        user_id = current_user.id
+    log = AuditLog(
+        user_id=user_id,
+        acao=acao,
+        detalhes=detalhes,
+        ip_address=request.remote_addr
+    )
+    db.session.add(log)
+    db.session.commit()
+
+def get_preco_vigente(data_ref):
+    preco = PrecoLeite.query.filter(PrecoLeite.data_vigencia <= data_ref).order_by(PrecoLeite.data_vigencia.desc()).first()
+    return preco.preco_litro if preco else 0
+
+def calcular_eficiencia_alimentar(animal_id, data_ini, data_fim):
+    producoes = ProducaoLeite.query.filter(
+        ProducaoLeite.animal_id == animal_id,
+        ProducaoLeite.data >= data_ini,
+        ProducaoLeite.data <= data_fim
+    ).all()
+    consumos = ConsumoRacao.query.filter(
+        ConsumoRacao.animal_id == animal_id,
+        ConsumoRacao.data >= data_ini,
+        ConsumoRacao.data <= data_fim
+    ).all()
+    
+    total_leite = sum(p.litros for p in producoes)
+    total_racao = sum(c.quantidade_kg for c in consumos)
+    
+    return total_leite / total_racao if total_racao > 0 else 0
+
+def calcular_custo_producao(data_ini, data_fim):
+    producoes = ProducaoLeite.query.filter(
+        ProducaoLeite.data >= data_ini,
+        ProducaoLeite.data <= data_fim
+    ).all()
+    consumos = ConsumoRacao.query.filter(
+        ConsumoRacao.data >= data_ini,
+        ConsumoRacao.data <= data_fim
+    ).all()
+    despesas = Despesa.query.filter(
+        Despesa.data >= data_ini,
+        Despesa.data <= data_fim
+    ).all()
+    
+    total_leite = sum(p.litros for p in producoes)
+    total_custos = sum(c.custo for c in consumos) + sum(d.valor for d in despesas)
+    
+    return total_custos / total_leite if total_leite > 0 else 0
+
+# ========== ROTAS ==========
+
+@app.route('/api/clima')
+def api_clima():
+    import requests
+    try:
+        # OpenWeatherMap API - voce precisa de uma chave gratuita em openweathermap.org
+        API_KEY = 'sua_chave_aqui'  # Substitua pela sua chave
+        CITY = 'Sao Paulo,BR'
+        url = f'http://api.openweathermap.org/data/2.5/weather?q={CITY}&appid={API_KEY}&units=metric&lang=pt_br'
+        resp = requests.get(url, timeout=5)
+        data = resp.json()
+        return {
+            'temp': data['main']['temp'],
+            'description': data['weather'][0]['description'],
+            'humidity': data['main']['humidity'],
+            'icon': data['weather'][0]['icon']
+        }
+    except:
+        return {'temp': 25, 'description': 'ensolarado', 'humidity': 60, 'icon': '01d'}
+
+@app.route('/api/atualizar-preco', methods=['POST'])
+@login_required
+def atualizar_preco():
+    try:
+        data = request.get_json()
+        novo_preco = float(data.get('preco', 0))
+        
+        if novo_preco <= 0:
+            return {'success': False, 'error': 'Preço inválido'}
+        
+        # Atualizar ou criar novo preço vigente
+        hoje = date.today()
+        preco_existente = PrecoLeite.query.filter(PrecoLeite.data_vigencia <= hoje).order_by(PrecoLeite.data_vigencia.desc()).first()
+        
+        if preco_existente:
+            preco_existente.preco_litro = novo_preco
+        else:
+            novo = PrecoLeite(data_vigencia=hoje, preco_litro=novo_preco)
+            db.session.add(novo)
+        
+        db.session.commit()
+        log_auditoria('Atualizar Preço Leite', f'Novo preço: R$ {novo_preco}')
+        
+        return {'success': True}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
+@app.route('/api/cotacao-leite')
+def api_cotacao_leite():
+    try:
+        hoje = date.today()
+        preco = get_preco_vigente(hoje)
+        preco_obj = PrecoLeite.query.filter(PrecoLeite.data_vigencia <= hoje).order_by(PrecoLeite.data_vigencia.desc()).first()
+        data_cotacao = preco_obj.data_vigencia.strftime('%d/%m/%Y') if preco_obj else hoje.strftime('%d/%m/%Y')
+        
+        # Simular tendência (em produção, usaria dados históricos)
+        import random
+        tendencia = 'alta' if random.random() > 0.5 else 'baixa'
+        
+        return {
+            'preco': float(preco),
+            'data': data_cotacao,
+            'tendencia': tendencia
+        }
+    except Exception as e:
+        return {'preco': 2.50, 'data': date.today().strftime('%d/%m/%Y'), 'tendencia': 'estavel'}
+
+@app.route('/')
+@login_required
+def index():
+    today = date.today()
+    
+    # Métricas de hoje
+    producoesHoje = ProducaoLeite.query.filter_by(data=today).all()
+    total_litros = sum(p.litros for p in producoesHoje)
+    num_animais_produzindo = len(set(p.animal_id for p in producoesHoje))
+    
+    consumoHoje = ConsumoRacao.query.filter_by(data=today).all()
+    total_custo_racao = sum(c.custo for c in consumoHoje)
+    
+    receita = 0
+    for p in producoesHoje:
+        preco = float(p.preco_venda) if p.preco_venda else float(get_preco_vigente(p.data))
+        receita += float(p.litros) * preco
+    
+    lucro = receita - float(total_custo_racao)
+    media_por_animal = total_litros / num_animais_produzindo if num_animais_produzindo > 0 else 0
+    
+    # Lucro mensal
+    primeiro_dia_mes = date(today.year, today.month, 1)
+    producoes_mes = ProducaoLeite.query.filter(ProducaoLeite.data >= primeiro_dia_mes).all()
+    receita_mensal = 0
+    for p in producoes_mes:
+        preco = float(p.preco_venda) if p.preco_venda else float(get_preco_vigente(p.data))
+        receita_mensal += float(p.litros) * preco
+    custo_mensal = sum(c.custo for c in ConsumoRacao.query.filter(ConsumoRacao.data >= primeiro_dia_mes).all())
+    lucro_mensal = receita_mensal - float(custo_mensal)
+    
+    # Últimos 7 dias
+    ultimos_dias = []
+    valores_producao = []
+    custos_dia = []
+    for i in range(6, -1, -1):
+        d = date.today() - timedelta(days=i)
+        ultimos_dias.append(d.strftime('%d/%m'))
+        prods = ProducaoLeite.query.filter_by(data=d).all()
+        valores_producao.append(sum(p.litros for p in prods))
+        
+        cons_dia = ConsumoRacao.query.filter_by(data=d).all()
+        custos_dia.append(sum(c.custo for c in cons_dia))
+    
+    # Comparação com semana anterior
+    semana_passada = []
+    for i in range(13, 6, -1):
+        d = date.today() - timedelta(days=i)
+        prods = ProducaoLeite.query.filter_by(data=d).all()
+        semana_passada.append(sum(p.litros for p in prods))
+    
+    total_semana_atual = sum(valores_producao)
+    total_semana_passada = sum(semana_passada)
+    variacao_semanal = ((total_semana_atual - total_semana_passada) / total_semana_passada * 100) if total_semana_passada > 0 else 0
+    
+    # Top 3 animais (maior produção na semana)
+    from collections import defaultdict
+    prod_por_animal = defaultdict(float)
+    for i in range(6, -1, -1):
+        d = date.today() - timedelta(days=i)
+        prods = ProducaoLeite.query.filter_by(data=d).all()
+        for p in prods:
+            prod_por_animal[p.animal.nome] += float(p.litros)
+    
+    top_animais = sorted(prod_por_animal.items(), key=lambda x: x[1], reverse=True)[:3]
+    
+    # Tipos de ração mais consumidos (semana)
+    racao_consumo = defaultdict(float)
+    for i in range(6, -1, -1):
+        d = date.today() - timedelta(days=i)
+        cons = ConsumoRacao.query.filter_by(data=d).all()
+        for c in cons:
+            racao_consumo[c.tipo_racao.nome] += float(c.quantidade_kg)
+    
+    # Alertas de saúde (próximas vacinações/vermifugações)
+    alertas_saude = SaudeAnimal.query.filter(
+        SaudeAnimal.proxima_dose <= date.today() + timedelta(days=7),
+        SaudeAnimal.proxima_dose >= date.today()
+    ).all()
+    
+    custo_producao_hoje = calcular_custo_producao(today, today)
+    
+    # Resumo mensal de produção
+    primeiro_dia_mes = date(today.year, today.month, 1)
+    producoes_mes = ProducaoLeite.query.filter(ProducaoLeite.data >= primeiro_dia_mes).all()
+    total_litros_mes = sum(p.litros for p in producoes_mes)
+    receita_mensal = sum(float(p.litros) * float(p.preco_venda if p.preco_venda else get_preco_vigente(p.data)) for p in producoes_mes)
+    
+    # Cotação atual do leite
+    preco_vigente_hoje = get_preco_vigente(today)
+    data_preco_vigente = PrecoLeite.query.filter(PrecoLeite.data_vigencia <= today).order_by(PrecoLeite.data_vigencia.desc()).first()
+    data_cotacao = data_preco_vigente.data_vigencia.strftime('%d/%m/%Y') if data_preco_vigente else today.strftime('%d/%m/%Y')
+    
+    return render_template('index.html', 
+                           total_litros=total_litros,
+                           receita=receita,
+                           custo=total_custo_racao,
+                           lucro=lucro,
+                           lucro_mensal=lucro_mensal,
+                           media_por_animal=media_por_animal,
+                           num_animais_produzindo=num_animais_produzindo,
+                           dias=ultimos_dias,
+                           valores_producao=valores_producao,
+                           custos_dia=custos_dia,
+                           variacao_semanal=variacao_semanal,
+                           top_animais=top_animais,
+                           racao_consumo=dict(racao_consumo),
+                           alertas_saude=alertas_saude,
+                           custo_producao=custo_producao_hoje,
+                           total_animais=Animal.query.filter_by(ativo=True).count(),
+                           preco_vigente=preco_vigente_hoje,
+                           data_cotacao=data_cotacao,
+                           total_litros_mes=total_litros_mes,
+                           receita_mensal_resumo=receita_mensal,
+                           receita_mensal=receita_mensal)
+
+@app.route('/relatorios/pdf')
+@login_required
+def relatorio_pdf():
+    from datetime import datetime
+    data_ini = request.args.get('data_ini')
+    data_fim = request.args.get('data_fim')
+    
+    if not data_ini:
+        data_ini = date.today().replace(day=1).strftime('%Y-%m-%d')
+    if not data_fim:
+        data_fim = date.today().strftime('%Y-%m-%d')
+    
+    data_ini_date = datetime.strptime(data_ini, '%Y-%m-%d').date()
+    data_fim_date = datetime.strptime(data_fim, '%Y-%m-%d').date()
+    
+    producoes = ProducaoLeite.query.filter(
+        ProducaoLeite.data >= data_ini_date, ProducaoLeite.data <= data_fim_date
+    ).all()
+    consumos = ConsumoRacao.query.filter(
+        ConsumoRacao.data >= data_ini_date, ConsumoRacao.data <= data_fim_date
+    ).all()
+    despesas = Despesa.query.filter(
+        Despesa.data >= data_ini_date, Despesa.data <= data_fim_date
+    ).all()
+    
+    total_litros = sum(p.litros for p in producoes)
+    custo_total = sum(c.custo for c in consumos) + sum(d.valor for d in despesas)
+    receita = sum(float(p.litros) * float(p.preco_venda if p.preco_venda else get_preco_vigente(p.data)) for p in producoes)
+    lucro = receita - float(custo_total)
+    
+    # Tentar usar reportlab para PDF profissional
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.pdfgen import canvas
+        from reportlab.lib.units import cm
+        from reportlab.lib import colors
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.enums import TA_CENTER, TA_RIGHT
+        from reportlab.graphics.charts.lineplots import LinePlot
+        from reportlab.graphics.charts.barcharts import VerticalBarChart
+        from reportlab.graphics.shapes import Drawing
+        from reportlab.graphics import renderPDF
+        import tempfile
+        import os
+        
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4,
+                                rightMargin=2*cm, leftMargin=2*cm,
+                                topMargin=2*cm, bottomMargin=2*cm)
+        styles = getSampleStyleSheet()
+        elements = []
+        
+        # Estilos personalizados
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=24,
+            textColor=colors.HexColor('#27AE60'),
+            spaceAfter=30,
+            alignment=TA_CENTER
+        )
+        
+        # Cabeçalho
+        elements.append(Paragraph('🐄 Terra Roxa System', title_style))
+        elements.append(Paragraph(f'Relatório de Gestão - {data_ini} a {data_fim}', styles['Normal']))
+        elements.append(Spacer(1, 0.5*cm))
+        
+        # Linha decorativa
+        elements.append(Paragraph('<hr/>', styles['Normal']))
+        elements.append(Spacer(1, 0.3*cm))
+        
+        # Resumo Executivo
+        elements.append(Paragraph('Resumo Executivo', styles['Heading2']))
+        
+        # Tabela de métricas
+        data = [
+            ['Métrica', 'Valor', 'Detalhes'],
+            ['Total Litros', f'{total_litros:.2f} L', f'{total_litros/max(1, (data_fim_date-data_ini_date).days):.2f} L/dia'],
+            ['Receita Total', f'R$ {receita:.2f}', f'Média: R$ {receita/max(1,total_litros):.4f}/L'],
+            ['Custo Total', f'R$ {custo_total:.2f}', f'{(custo_total/receita*100) if receita > 0 else 0:.1f}% da receita'],
+            ['Lucro Líquido', f'R$ {lucro:.2f}', f'Margem: {(lucro/receita*100) if receita > 0 else 0:.1f}%']
+        ]
+        
+        t = Table(data, colWidths=[4*cm, 4*cm, 6*cm])
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#27AE60')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.Color(0,0,0, alpha=0.3)),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F7F9F7')])
+        ]))
+        elements.append(t)
+        elements.append(Spacer(1, 1*cm))
+        
+        # Produção por Animal (Top 5)
+        if producoes:
+            from collections import defaultdict
+            prod_animal = defaultdict(float)
+            for p in producoes:
+                prod_animal[p.animal.nome] += float(p.litros)
+            
+            top5 = sorted(prod_animal.items(), key=lambda x: x[1], reverse=True)[:5]
+            
+            elements.append(Paragraph('Top 5 Animais - Produção', styles['Heading2']))
+            
+            data_animais = [['Animal', 'Total (L)', '% do Total']]
+            for animal, prod in top5:
+                pct = (prod / total_litros * 100) if total_litros > 0 else 0
+                data_animais.append([animal, f'{prod:.2f}', f'{pct:.1f}%'])
+            
+            t2 = Table(data_animais, colWidths=[6*cm, 4*cm, 4*cm])
+            t2.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#3498DB')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('GRID', (0, 0), (-1, -1), 1, colors.Color(0,0,0, alpha=0.3)),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#EBF5FB')])
+            ]))
+            elements.append(t2)
+            elements.append(Spacer(1, 1*cm))
+        
+        # Custos por Categoria
+        if despesas:
+            from collections import defaultdict
+            custos_cat = defaultdict(float)
+            for d in despesas:
+                custos_cat[d.categoria or 'Outros'] += float(d.valor)
+            
+            elements.append(Paragraph('Custos por Categoria', styles['Heading2']))
+            
+            data_custos = [['Categoria', 'Valor (R$)', '% do Total']]
+            for cat, val in sorted(custos_cat.items(), key=lambda x: x[1], reverse=True):
+                pct = (val / custo_total * 100) if custo_total > 0 else 0
+                data_custos.append([cat, f'{val:.2f}', f'{pct:.1f}%'])
+            
+            t3 = Table(data_custos, colWidths=[6*cm, 4*cm, 4*cm])
+            t3.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F39C12')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('GRID', (0, 0), (-1, -1), 1, colors.Color(0,0,0, alpha=0.3)),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#FEF9E7')])
+            ]))
+            elements.append(t3)
+        
+        # Rodapé
+        elements.append(Spacer(1, 2*cm))
+        elements.append(Paragraph(f'Relatório gerado em {datetime.now().strftime("%d/%m/%Y %H:%M")} - Terra Roxa System', 
+                                           styles['Normal']))
+        
+        doc.build(elements)
+        buffer.seek(0)
+        
+        response = make_response(buffer.read())
+        response.headers['Content-Disposition'] = f'attachment; filename=relatorio_terra_roxa_{data_ini}_{data_fim}.pdf'
+        response.headers['Content-Type'] = 'application/pdf'
+        return response
+        
+    except Exception as e:
+        # Fallback para HTML
+        html = f'''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Relatório Terra Roxa</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; padding: 40px; }}
+                h1 {{ color: #27AE60; }}
+                table {{ border-collapse: collapse; width: 100%; margin: 20px 0; }}
+                th, td {{ border: 1px solid #ddd; padding: 12px; text-align: center; }}
+                th {{ background: #27AE60; color: white; }}
+                .positive {{ color: green; }}
+                .negative {{ color: red; }}
+            </style>
+        </head>
+        <body>
+            <h1>🐄 Terra Roxa System</h1>
+            <h3>Relatório de Gestão</h3>
+            <p><strong>Período:</strong> {data_ini} a {data_fim}</p>
+            <hr>
+            <h4>Resumo Executivo</h4>
+            <table>
+                <tr><th>Métrica</th><th>Valor</th></tr>
+                <tr><td>Total Litros</td><td>{total_litros:.2f} L</td></tr>
+                <tr><td>Receita Total</td><td>R$ {receita:.2f}</td></tr>
+                <tr><td>Custo Total</td><td>R$ {custo_total:.2f}</td></tr>
+                <tr><td>Lucro Líquido</td><td class="{'positive' if lucro >= 0 else 'negative'}">R$ {lucro:.2f}</td></tr>
+            </table>
+            <p style="margin-top: 40px; font-size: 12px; color: #666;">
+                Relatório gerado em {datetime.now().strftime("%d/%m/%Y %H:%M")} - Terra Roxa System
+            </p>
+        </body>
+        </html>
+        '''
+        response = make_response(html)
+        response.headers['Content-Disposition'] = f'attachment; filename=relatorio_terra_roxa_{data_ini}_{data_fim}.html'
+        response.headers['Content-Type'] = 'text/html'
+        return response
+
+@app.route('/cooperativas')
+@login_required
+def cooperativas():
+    # Integração com cooperativas (simulado por enquanto)
+    # Em produção, usaria APIs reais de cooperativas
+    cooperativas_info = [
+        {
+            'nome': 'Coopela',
+            'contato': '(11) 1234-5678',
+            'email': 'contato@coopela.com.br',
+            'preco_leite': 3.60,
+            'cargas_disponiveis': 5,
+            'distancia_km': 45
+        },
+        {
+            'nome': 'Laticínios Boa Vista',
+            'contato': '(11) 9876-5432',
+            'email': 'comercial@laticinios.com.br',
+            'preco_leite': 3.55,
+            'cargas_disponiveis': 3,
+            'distancia_km': 60
+        }
+    ]
+    return render_template('cooperativas.html', cooperativas=cooperativas_info)
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        
+        user = User.query.filter_by(email=email).first()
+        if user and user.ativo:
+            from werkzeug.security import check_password_hash
+            if check_password_hash(user.senha_hash, password):
+                login_user(user)
+                log_auditoria('Login realizado', f'Usuário {email} fez login')
+                return redirect(url_for('index'))
+        
+        flash('Email ou senha inválidos', 'danger')
+        return redirect(url_for('login'))
+    
+    return render_template('login.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    if request.method == 'POST':
+        email = request.form.get('email')
+        nome = request.form.get('nome')
+        senha = request.form.get('senha')
+        
+        if User.query.filter_by(email=email).first():
+            flash('Email já cadastrado', 'danger')
+            return redirect(url_for('register'))
+        
+        from werkzeug.security import generate_password_hash
+        user = User(
+            email=email,
+            nome=nome,
+            senha_hash=generate_password_hash(senha),
+            is_admin=False,
+            role='operador'
+        )
+        db.session.add(user)
+        db.session.commit()
+        log_auditoria('Usuário criado', f'Novo usuário: {email}')
+        
+        flash('Usuário criado com sucesso! Faça login.', 'success')
+        return redirect(url_for('login'))
+    
+    return render_template('register.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    log_auditoria('Logout realizado', f'Usuário {current_user.email} saiu')
+    logout_user()
+    return redirect(url_for('login'))
+
+# ========== PRODUÇÃO ==========
+
+@app.route('/producao', methods=['GET', 'POST'])
+@login_required
+def producao():
+    if request.method == 'POST':
+        animal_id = request.form.get('animal_id')
+        litros = float(request.form.get('litros'))
+        data = datetime.strptime(request.form.get('data'), '%Y-%m-%d').date()
+        preco_venda = float(request.form.get('preco_venda')) if request.form.get('preco_venda') else None
+        gordura = float(request.form.get('gordura')) if request.form.get('gordura') else None
+        proteina = float(request.form.get('proteina')) if request.form.get('proteina') else None
+        ccs = float(request.form.get('ccs')) if request.form.get('ccs') else None
+        
+        nova_producao = ProducaoLeite(
+            animal_id=animal_id, litros=litros, data=data, 
+            preco_venda=preco_venda, gordura=gordura,
+            proteina=proteina, ccs=ccs
+        )
+        db.session.add(nova_producao)
+        db.session.commit()
+        log_auditoria('Produção registrada', f'Animal ID {animal_id}, {litros}L')
+        flash('Produção registrada com sucesso!', 'success')
+        return redirect(url_for('producao'))
+    
+    animais = Animal.query.filter_by(ativo=True).all()
+    filtro_data_ini = request.args.get('data_ini')
+    filtro_data_fim = request.args.get('data_fim')
+    filtro_animal = request.args.get('animal_id')
+    
+    query = ProducaoLeite.query
+    if filtro_data_ini:
+        query = query.filter(ProducaoLeite.data >= datetime.strptime(filtro_data_ini, '%Y-%m-%d').date())
+    if filtro_data_fim:
+        query = query.filter(ProducaoLeite.data <= datetime.strptime(filtro_data_fim, '%Y-%m-%d').date())
+    if filtro_animal:
+        query = query.filter(ProducaoLeite.animal_id == filtro_animal)
+    
+    producoes = query.order_by(ProducaoLeite.data.desc()).all()
+    today = date.today().strftime('%Y-%m-%d')
+    
+    return render_template('producao.html', 
+                           animais=animais, 
+                           producoes=producoes, 
+                           today=today,
+                           get_preco_vigente=get_preco_vigente,
+                           float=float)
+
+@app.route('/producao/excluir/<int:id>')
+@login_required
+def excluir_producao(id):
+    if current_user.role not in ['admin', 'gerente']:
+        flash('Acesso restrito', 'danger')
+        return redirect(url_for('producao'))
+    producao = ProducaoLeite.query.get(id)
+    db.session.delete(producao)
+    db.session.commit()
+    log_auditoria('Produção excluída', f'ID {id}')
+    flash('Produção excluída!', 'success')
+    return redirect(url_for('producao'))
+
+# ========== RAÇÃO ==========
+
+@app.route('/racao', methods=['GET', 'POST'])
+@login_required
+def racao():
+    if request.method == 'POST':
+        nome = request.form.get('nome')
+        preco_kg = float(request.form.get('preco_kg'))
+        tipo = request.form.get('tipo', 'concentrado')
+        
+        novo_tipo = TipoRacao(nome=nome, preco_kg=preco_kg, tipo=tipo)
+        db.session.add(novo_tipo)
+        db.session.commit()
+        log_auditoria('Tipo ração cadastrado', f'{nome} - R$ {preco_kg}/kg')
+        flash('Tipo de ração cadastrado!', 'success')
+        return redirect(url_for('racao'))
+    
+    tipos = TipoRacao.query.all()
+    return render_template('racao.html', tipos=tipos)
+
+@app.route('/racao/consumo', methods=['GET', 'POST'])
+@login_required
+def consumo_racao():
+    if request.method == 'POST':
+        animal_id = request.form.get('animal_id')
+        tipo_racao_id = request.form.get('tipo_racao_id')
+        quantidade_kg = float(request.form.get('quantidade_kg'))
+        data = datetime.strptime(request.form.get('data'), '%Y-%m-%d').date()
+        
+        tipo = TipoRacao.query.get(tipo_racao_id)
+        custo = quantidade_kg * float(tipo.preco_kg)
+        eficiencia = None
+        if quantidade_kg > 0:
+            producao_dia = ProducaoLeite.query.filter_by(animal_id=animal_id, data=data).first()
+            if producao_dia:
+                eficiencia = float(producao_dia.litros) / quantidade_kg
+        
+        novo_consumo = ConsumoRacao(
+            animal_id=animal_id, tipo_racao_id=tipo_racao_id,
+            quantidade_kg=quantidade_kg, data=data, custo=custo,
+            eficiencia=eficiencia
+        )
+        db.session.add(novo_consumo)
+        db.session.commit()
+        log_auditoria('Consumo registrado', f'Animal ID {animal_id}, {quantidade_kg}kg')
+        flash('Consumo registrado!', 'success')
+        return redirect(url_for('consumo_racao'))
+    
+    animais = Animal.query.filter_by(ativo=True).all()
+    tipos = TipoRacao.query.all()
+    filtro_data_ini = request.args.get('data_ini')
+    filtro_data_fim = request.args.get('data_fim')
+    
+    query = ConsumoRacao.query
+    if filtro_data_ini:
+        query = query.filter(ConsumoRacao.data >= datetime.strptime(filtro_data_ini, '%Y-%m-%d').date())
+    if filtro_data_fim:
+        query = query.filter(ConsumoRacao.data <= datetime.strptime(filtro_data_fim, '%Y-%m-%d').date())
+    
+    consumos = query.order_by(ConsumoRacao.data.desc()).all()
+    
+    return render_template('consumo_racao.html', animais=animais, tipos=tipos, consumos=consumos)
+
+# ========== ANIMAIS ==========
+
+@app.route('/animais', methods=['GET', 'POST'])
+@login_required
+def animais():
+    if request.method == 'POST':
+        nome = request.form.get('nome')
+        brinco = request.form.get('brinco')
+        raca = request.form.get('raca')
+        lote = request.form.get('lote')
+        sexo = request.form.get('sexo')
+        data_nasc = datetime.strptime(request.form.get('data_nascimento'), '%Y-%m-%d').date() if request.form.get('data_nascimento') else None
+        
+        novo_animal = Animal(
+            nome=nome, brinco=brinco, raca=raca, lote=lote,
+            sexo=sexo, data_nascimento=data_nasc
+        )
+        db.session.add(novo_animal)
+        db.session.commit()
+        log_auditoria('Animal cadastrado', f'{nome} - Brinco {brinco}')
+        flash('Animal cadastrado!', 'success')
+        return redirect(url_for('animais'))
+    
+    animais = Animal.query.order_by(Animal.nome).all()
+    return render_template('animais.html', animais=animais)
+
+@app.route('/animais/saude/<int:id>', methods=['GET', 'POST'])
+@login_required
+def saude_animal(id):
+    animal = Animal.query.get_or_404(id)
+    
+    if request.method == 'POST':
+        tipo = request.form.get('tipo')
+        descricao = request.form.get('descricao')
+        data_aplicacao = datetime.strptime(request.form.get('data_aplicacao'), '%Y-%m-%d').date()
+        proxima_dose = datetime.strptime(request.form.get('proxima_dose'), '%Y-%m-%d').date() if request.form.get('proxima_dose') else None
+        custo = float(request.form.get('custo')) if request.form.get('custo') else None
+        observacoes = request.form.get('observacoes')
+        
+        registro = SaudeAnimal(
+            animal_id=id, tipo=tipo, descricao=descricao,
+            data_aplicacao=data_aplicacao, proxima_dose=proxima_dose,
+            custo=custo, observacoes=observacoes
+        )
+        db.session.add(registro)
+        db.session.commit()
+        log_auditoria('Registro saúde', f'Animal: {animal.nome}, Tipo: {tipo}')
+        flash('Registro de saúde adicionado!', 'success')
+        return redirect(url_for('saude_animal', id=id))
+    
+    registros = SaudeAnimal.query.filter_by(animal_id=id).order_by(SaudeAnimal.data_aplicacao.desc()).all()
+    from datetime import date
+    return render_template('saude_animal.html', animal=animal, registros=registros, today=date.today())
+
+# ========== RELATÓRIOS ==========
+
+@app.route('/pastagens', methods=['GET', 'POST'])
+@login_required
+def pastagens():
+    if request.method == 'POST':
+        lote = request.form.get('lote')
+        area_ha = float(request.form.get('area_ha'))
+        tipo_forrageira = request.form.get('tipo_forrageira')
+        data_plantio = datetime.strptime(request.form.get('data_plantio'), '%Y-%m-%d').date() if request.form.get('data_plantio') else None
+        fertilizacao = request.form.get('fertilizacao')
+        
+        pastagem = Pastagem(
+            lote=lote,
+            area_ha=area_ha,
+            tipo_forrageira=tipo_forrageira,
+            data_plantio=data_plantio,
+            fertilizacao=fertilizacao
+        )
+        db.session.add(pastagem)
+        db.session.commit()
+        log_auditoria('Pastagem cadastrada', f'Lote {lote} - {area_ha}ha')
+        flash('Pastagem cadastrada!', 'success')
+        return redirect(url_for('pastagens'))
+    
+    pastagens = Pastagem.query.order_by(Pastagem.lote).all()
+    return render_template('pastagens.html', pastagens=pastagens)
+
+@app.route('/relatorios')
+@login_required
+def relatorios():
+    data_ini = request.args.get('data_ini')
+    data_fim = request.args.get('data_fim')
+    
+    if not data_ini:
+        data_ini = date.today().replace(day=1).strftime('%Y-%m-%d')
+    if not data_fim:
+        data_fim = date.today().strftime('%Y-%m-%d')
+    
+    data_ini_date = datetime.strptime(data_ini, '%Y-%m-%d').date()
+    data_fim_date = datetime.strptime(data_fim, '%Y-%m-%d').date()
+    
+    producoes = ProducaoLeite.query.filter(
+        ProducaoLeite.data >= data_ini_date, ProducaoLeite.data <= data_fim_date
+    ).all()
+    consumos = ConsumoRacao.query.filter(
+        ConsumoRacao.data >= data_ini_date, ConsumoRacao.data <= data_fim_date
+    ).all()
+    despesas = Despesa.query.filter(
+        Despesa.data >= data_ini_date, Despesa.data <= data_fim_date
+    ).all()
+    
+    total_litros = sum(p.litros for p in producoes)
+    custo_total = sum(c.custo for c in consumos) + sum(d.valor for d in despesas)
+    
+    receita = 0
+    for p in producoes:
+        preco = float(p.preco_venda) if p.preco_venda else float(get_preco_vigente(p.data))
+        receita += float(p.litros) * preco
+    
+    lucro = receita - float(custo_total)
+    custo_producao = calcular_custo_producao(data_ini_date, data_fim_date)
+    
+    dias_grafico = []
+    valores_prod = []
+    custos_dia = []
+    
+    delta = data_fim_date - data_ini_date
+    if delta.days <= 31:
+        for i in range(delta.days + 1):
+            d = data_ini_date + timedelta(days=i)
+            dias_grafico.append(d.strftime('%d/%m'))
+            
+            prods_dia = [p.litros for p in producoes if p.data == d]
+            valores_prod.append(sum(prods_dia))
+            
+            custos_dia_sum = [c.custo for c in consumos if c.data == d]
+            custos_dia.append(sum(custos_dia_sum))
+    
+    custo_por_tipo = {}
+    for c in consumos:
+        tipo_nome = c.tipo_racao.nome
+        custo_por_tipo[tipo_nome] = custo_por_tipo.get(tipo_nome, 0) + float(c.custo)
+    
+    return render_template('relatorios.html',
+                           data_ini=data_ini, data_fim=data_fim,
+                           total_litros=total_litros, receita=receita,
+                           custo=custo_total, lucro=lucro,
+                           custo_producao=custo_producao,
+                           dias_grafico=dias_grafico, valores_prod=valores_prod,
+                           custos_dia=custos_dia, custo_por_tipo=custo_por_tipo)
+
+# ========== FINANCEIRO ==========
+
+@app.route('/financeiro', methods=['GET', 'POST'])
+@login_required
+def financeiro():
+    if request.method == 'POST':
+        descricao = request.form.get('descricao')
+        valor = float(request.form.get('valor'))
+        categoria = request.form.get('categoria')
+        data = datetime.strptime(request.form.get('data'), '%Y-%m-%d').date()
+        observacoes = request.form.get('observacoes')
+        
+        despesa = Despesa(
+            descricao=descricao, valor=valor, categoria=categoria,
+            data=data, observacoes=observacoes
+        )
+        db.session.add(despesa)
+        db.session.commit()
+        log_auditoria('Despesa registrada', f'{descricao} - R$ {valor}')
+        flash('Despesa registrada!', 'success')
+        return redirect(url_for('financeiro'))
+    
+    filtro_data_ini = request.args.get('data_ini')
+    filtro_data_fim = request.args.get('data_fim')
+    filtro_categoria = request.args.get('categoria')
+    
+    query = Despesa.query
+    if filtro_data_ini:
+        query = query.filter(Despesa.data >= datetime.strptime(filtro_data_ini, '%Y-%m-%d').date())
+    if filtro_data_fim:
+        query = query.filter(Despesa.data <= datetime.strptime(filtro_data_fim, '%Y-%m-%d').date())
+    if filtro_categoria:
+        query = query.filter(Despesa.categoria == filtro_categoria)
+    
+    despesas = query.order_by(Despesa.data.desc()).all()
+    
+    total_despesas = sum(d.valor for d in despesas)
+    
+    from datetime import date
+    return render_template('financeiro.html', despesas=despesas, total_despesas=total_despesas, today=date.today())
+
+# ========== CONFIGURAÇÕES ==========
+
+@app.route('/orcamento', methods=['GET', 'POST'])
+@login_required
+def orcamento():
+    if request.method == 'POST':
+        ano = int(request.form.get('ano'))
+        mes = int(request.form.get('mes'))
+        categoria = request.form.get('categoria')
+        valor_previsto = float(request.form.get('valor_previsto'))
+        valor_realizado = float(request.form.get('valor_realizado', 0))
+        
+        orcamento = Orcamento(
+            ano=ano, mes=mes, categoria=categoria,
+            valor_previsto=valor_previsto, valor_realizado=valor_realizado
+        )
+        db.session.add(orcamento)
+        db.session.commit()
+        log_auditoria('Orçamento cadastrado', f'{categoria} - {mes}/{ano}')
+        flash('Orçamento cadastrado!', 'success')
+        return redirect(url_for('orcamento'))
+    
+    orcamentos = Orcamento.query.order_by(Orcamento.ano.desc(), Orcamento.mes).all()
+    total_previsto = sum(o.valor_previsto for o in orcamentos)
+    total_realizado = sum(o.valor_realizado for o in orcamentos)
+    
+    from datetime import date
+    return render_template('orcamento.html', 
+                         orcamentos=orcamentos,
+                         total_previsto=total_previsto,
+                         total_realizado=total_realizado,
+                         today=date.today())
+
+@app.route('/ajustes')
+@login_required
+def ajustes():
+    precos = PrecoLeite.query.order_by(PrecoLeite.data_vigencia.desc()).all()
+    return render_template('ajustes.html', precos=precos)
+
+@app.route('/ajustes/preco', methods=['POST'])
+@login_required
+def ajustar_preco():
+    if current_user.role not in ['admin', 'gerente']:
+        flash('Acesso restrito', 'danger')
+        return redirect(url_for('ajustes'))
+    
+    preco_litro = float(request.form.get('preco_litro'))
+    data_vigencia = datetime.strptime(request.form.get('data_vigencia'), '%Y-%m-%d').date()
+    
+    novo_preco = PrecoLeite(preco_litro=preco_litro, data_vigencia=data_vigencia)
+    db.session.add(novo_preco)
+    db.session.commit()
+    log_auditoria('Preço ajustado', f'R$ {preco_litro}/L a partir de {data_vigencia}')
+    flash('Preço atualizado!', 'success')
+    return redirect(url_for('ajustes'))
+
+# ========== ADMIN ==========
+
+@app.route('/admin/usuarios')
+@login_required
+def admin_usuarios():
+    if current_user.role != 'admin':
+        flash('Acesso restrito', 'danger')
+        return redirect(url_for('index'))
+    
+    usuarios = User.query.order_by(User.created_at.desc()).all()
+    return render_template('admin_usuarios.html', usuarios=usuarios)
+
+@app.route('/admin/auditoria')
+@login_required
+def auditoria():
+    if current_user.role != 'admin':
+        flash('Acesso restrito', 'danger')
+        return redirect(url_for('index'))
+    
+    logs = AuditLog.query.order_by(AuditLog.timestamp.desc()).limit(100).all()
+    return render_template('auditoria.html', logs=logs)
+
+# ========== BACKUP ==========
+
+@app.route('/admin/backup')
+@login_required
+def backup():
+    if current_user.role != 'admin':
+        flash('Acesso restrito', 'danger')
+        return redirect(url_for('index'))
+    
+    from datetime import datetime
+    backup_name = f'backup_terra_roxa_{datetime.now().strftime("%Y%m%d_%H%M%S")}.sql'
+    
+    # Use Python's sqlite3 module instead of command-line tool
+    import sqlite3
+    conn = sqlite3.connect('gadoleiteiro.db')
+    with open('backup_temp.sql', 'w') as f:
+        for line in conn.iterdump():
+            f.write(f'{line}\n')
+    conn.close()
+    
+    with open('backup_temp.sql', 'r') as f:
+        sql_content = f.read()
+    
+    import os
+    os.remove('backup_temp.sql')
+    
+    response = make_response(sql_content)
+    response.headers['Content-Disposition'] = f'attachment; filename={backup_name}'
+    response.headers['Content-Type'] = 'application/sql'
+    log_auditoria('Backup realizado', f'Arquivo: {backup_name}')
+    return response
+
+if __name__ == '__main__':
+    with app.app_context():
+        # Comentado: usar Flask-Migrate em produção
+        db.create_all()
+        
+        # Dados iniciais
+        if not Animal.query.first():
+            db.session.add(Animal(nome='Bella', brinco='001', raca='Holandesa', lote='Lote A'))
+            db.session.add(Animal(nome='Mimosa', brinco='002', raca='Girolanda', lote='Lote A'))
+            db.session.add(Animal(nome='Estrela', brinco='003', raca='Jersey', lote='Lote B'))
+        
+        if not TipoRacao.query.first():
+            db.session.add(TipoRacao(nome='Ração Padrão', preco_kg=3.50, tipo='concentrado'))
+            db.session.add(TipoRacao(nome='Ração Premium', preco_kg=5.00, tipo='concentrado'))
+        
+        if not PrecoLeite.query.first():
+            db.session.add(PrecoLeite(preco_litro=2.50, data_vigencia=date(2024, 1, 1)))
+        
+        # Admin padrão
+        from werkzeug.security import generate_password_hash
+        if not User.query.filter_by(email='admin@terra-roxa.com').first():
+            admin = User(
+                email='admin@terra-roxa.com',
+                nome='Administrador',
+                senha_hash=generate_password_hash('admin123'),
+                is_admin=True,
+                role='admin'
+            )
+            db.session.add(admin)
+        
+        db.session.commit()
+        print('✅ Banco de dados inicializado!')
+    
+    app.run(host='0.0.0.0', port=8080, debug=True)

@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Admin - Usuários - Terra Roxa System{% endblock %}
+{% block page_title %}🔧 Gerenciar Usuários{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-12 col-md-4">
+        <div class="card">
+            <div class="card-header bg-transparent">
+                <h5 class="mb-0">➕ Novo Usuário</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="/admin/usuario/criar">
+                    <div class="mb-3">
+                        <label class="form-label">Nome</label>
+                        <input type="text" name="nome" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="email" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Senha</label>
+                        <input type="password" name="senha" class="form-control" required>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="is_admin" id="is_admin">
+                        <label class="form-check-label" for="is_admin">Administrador</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Criar Usuário</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-8">
+        <div class="card">
+            <div class="card-header bg-transparent">
+                <h5 class="mb-0">📋 Usuários Cadastrados</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Email</th>
+                                <th>Admin</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for u in usuarios %}
+                            <tr>
+                                <td>{{ u.nome or 'Sem nome' }}</td>
+                                <td>{{ u.email }}</td>
+                                <td>
+                                    {% if u.is_admin %}
+                                    <span class="badge bg-success">Sim</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Não</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editModal{{ u.id }}">✏️</button>
+                                    <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#senhaModal{{ u.id }}">🔑</button>
+                                    <a href="/admin/usuario/excluir/{{ u.id }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Excluir usuário?')">✕</a>
+                                </td>
+                            </tr>
+                            <div class="modal fade" id="editModal{{ u.id }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Editar {{ u.nome or u.email }}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <form method="POST" action="/admin/usuario/editar/{{ u.id }}">
+                                            <div class="modal-body">
+                                                <div class="mb-2">
+                                                    <label class="form-label">Nome</label>
+                                                    <input type="text" name="nome" class="form-control" value="{{ u.nome or '' }}">
+                                                </div>
+                                                <div class="mb-2">
+                                                    <label class="form-label">Email</label>
+                                                    <input type="email" name="email" class="form-control" value="{{ u.email }}" required>
+                                                </div>
+                                                <div class="mb-2">
+                                                    <label class="form-label">Nova Senha (deixe em branco para manter)</label>
+                                                    <input type="password" name="senha" class="form-control">
+                                                </div>
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="is_admin" id="is_admin{{ u.id }}" {% if u.is_admin %}checked{% endif %}>
+                                                    <label class="form-check-label" for="is_admin{{ u.id }}">Administrador</label>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                <button type="submit" class="btn btn-primary">Salvar</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal fade" id="senhaModal{{ u.id }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Trocar Senha - {{ u.nome or u.email }}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <form method="POST" action="/admin/usuario/trocar-senha/{{ u.id }}">
+                                            <div class="modal-body">
+                                                <div class="mb-2">
+                                                    <label class="form-label">Nova Senha</label>
+                                                    <input type="password" name="nova_senha" class="form-control" required>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                <button type="submit" class="btn btn-primary">Alterar</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">Nenhum usuário cadastrado</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Terra Roxa System{% endblock %}</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐄</text></svg>">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Nova paleta inspirada no AgroFlow e Harvestiq 2025-2026 */
+            --primary-green: #2ECC71;
+            --dark-green: #27AE60;
+            --darker-green: #1E8449;
+            --accent-emerald: #40A190;
+            --earth-brown: #924812;
+            --harvest-gold: #F1C40F;
+            --sky-blue: #3498DB;
+            --navy-dark: #2C3E50;
+            --bg-light: #F7F9F7;
+            --bg-card: #FFFFFF;
+            --text-primary: #2D3436;
+            --text-secondary: #636E72;
+            --border-light: #E8F5E9;
+            --success-light: #D5F5E3;
+            --warning-light: #FEF9E7;
+            --danger-light: #FADBD8;
+            --shadow-sm: 0 2px 8px rgba(39, 174, 96, 0.08);
+            --shadow-md: 0 4px 16px rgba(39, 174, 96, 0.12);
+            --shadow-lg: 0 8px 32px rgba(39, 174, 96, 0.16);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+        }
+        
+        * {
+            margin:0;
+            padding:0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-light);
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(46, 204, 113, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(241, 196, 15, 0.03) 0%, transparent 50%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            transition: background-color 0.3s, color 0.3s;
+            line-height: 1.6;
+        }
+        
+        /* Backgrounds Unsplash por página com overlay */
+        body.page-login {
+            background: linear-gradient(rgba(39, 174, 96, 0.85), rgba(30, 132, 73, 0.85)), 
+                        url('https://images.unsplash.com/photo-1500595046743-cd271d694d30?w=1920&q=80') !important;
+            background-size: cover !important;
+            background-position: center !important;
+            background-attachment: fixed !important;
+        }
+        
+        body.page-dashboard {
+            background: linear-gradient(rgba(247, 249, 247, 0.92), rgba(247, 249, 247, 0.92)), 
+                        url('https://images.unsplash.com/photo-1500382017468-90445024852b?w=1920&q=80') !important;
+            background-size: cover !important;
+            background-attachment: fixed !important;
+        }
+        
+        body.page-animais {
+            background: linear-gradient(rgba(247, 249, 247, 0.90), rgba(247, 249, 247, 0.90)), 
+                        url('https://images.unsplash.com/photo-1518834103326-44cccb7c9a2?w=1920&q=80') !important;
+            background-size: cover !important;
+            background-attachment: fixed !important;
+        }
+        
+        body.page-producao {
+            background: linear-gradient(rgba(247, 249, 247, 0.90), rgba(247, 249, 247, 0.90)), 
+                        url('https://images.unsplash.com/photo-1464226606818-fa6b67f9b6a7?w=1920&q=80') !important;
+            background-size: cover !important;
+            background-attachment: fixed !important;
+        }
+        
+        body.page-racao {
+            background: linear-gradient(rgba(247, 249, 247, 0.92), rgba(247, 249, 247, 0.92)), 
+                        url('https://images.unsplash.com/photo-1574323347407-08d966c199cb?w=1920&q=80') !important;
+            background-size: cover !important;
+            background-attachment: fixed !important;
+        }
+        
+        body.page-financeiro {
+            background: linear-gradient(rgba(247, 249, 247, 0.92), rgba(247, 249, 247, 0.92)), 
+                        url('https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=1920&q=80') !important;
+            background-size: cover !important;
+            background-attachment: fixed !important;
+        }
+        
+        body.page-relatorios {
+            background: linear-gradient(rgba(247, 249, 247, 0.92), rgba(247, 249, 247, 0.92)), 
+                        url('https://images.unsplash.com/photo-1551288049-bebda4e90a1?w=1920&q=80') !important;
+            background-size: cover !important;
+            background-attachment: fixed !important;
+        }
+        
+        body.page-pastagens {
+            background: linear-gradient(rgba(247, 249, 247, 0.90), rgba(247, 249, 247, 0.90)), 
+                        url('https://images.unsplash.com/photo-1500382017468-90445024852b?w=1920&q=80') !important;
+            background-size: cover !important;
+            background-attachment: fixed !important;
+        }
+        
+        body.dark-mode.page-dashboard,
+        body.dark-mode.page-animais,
+        body.dark-mode.page-producao,
+        body.dark-mode.page-racao,
+        body.dark-mode.page-financeiro,
+        body.dark-mode.page-relatorios,
+        body.dark-mode.page-pastagens {
+            background: linear-gradient(rgba(26, 26, 46, 0.92), rgba(26, 26, 46, 0.92)), 
+                        url('https://images.unsplash.com/photo-1500382017468-90445024852b?w=1920&q=80') !important;
+            background-size: cover !important;
+            background-attachment: fixed !important;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-light);
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(46, 204, 113, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(241, 196, 15, 0.03) 0%, transparent 50%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            transition: background-color 0.3s, color 0.3s;
+            line-height: 1.6;
+        }
+        
+        body.dark-mode {
+            --primary-green: #27AE60;
+            --dark-green: #2ECC71;
+            --navy-dark: #1a252f;
+            --bg-light: #1a1a2e;
+            --bg-card: #16213e;
+            --text-primary: #E8F5E9;
+            --text-secondary: #B0BEC5;
+            --border-light: #2C3E50;
+            --success-light: #1E8449;
+            --warning-light: #924812;
+            --danger-light: #C0392B;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.4);
+            background: var(--bg-light);
+            color: var(--text-primary);
+        }
+        
+        /* Sidebar Moderna - Bento Style */
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(180deg, #2C3E50 0%, #27AE60 100%);
+            box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+            backdrop-filter: blur(20px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-right: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        body.dark-mode .sidebar {
+            background: linear-gradient(180deg, #1a252f 0%, #1E8449 100%);
+        }
+        
+        @media (max-width: 767.98px) {
+            .sidebar {
+                min-height: auto;
+                position: fixed;
+                top: 0;
+                left: -100%;
+                width: 280px;
+                z-index: 1050;
+                transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                box-shadow: 8px 0 32px rgba(0,0,0,0.3);
+            }
+            .sidebar.show {
+                left: 0;
+            }
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.6);
+                backdrop-filter: blur(4px);
+                z-index: 1049;
+                animation: fadeIn 0.3s ease;
+            }
+            .sidebar-overlay.show {
+                display: block;
+            }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.85);
+            padding: 12px 20px;
+            border-radius: var(--radius-sm);
+            margin: 4px 8px;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .sidebar .nav-link::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 0;
+            background: var(--harvest-gold);
+            border-radius: 0 3px 3px 0;
+            transition: height 0.2s ease;
+        }
+        
+        .sidebar .nav-link:hover::before,
+        .sidebar .nav-link.active::before {
+            height: 60%;
+        }
+        
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            background: rgba(255,255,255,0.12);
+            color: #fff;
+            transform: translateX(4px);
+        }
+        
+        .mobile-header {
+            display: none;
+        }
+        
+        @media (max-width: 767.98px) {
+            .mobile-header {
+                display: flex;
+                background: linear-gradient(135deg, #2C3E50 0%, #27AE60 100%);
+                color: white;
+                padding: 12px 16px;
+                position: sticky;
+                top: 0;
+                z-index: 1020;
+                box-shadow: var(--shadow-md);
+            }
+            .mobile-header h5 {
+                margin: 0;
+                font-size: 1.1rem;
+                font-weight: 600;
+            }
+        }
+        
+        /* Cards Modernos - Bento Grid Style */
+        .card {
+            border: none;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: var(--bg-card);
+            overflow: hidden;
+            border: 1px solid var(--border-light);
+        }
+        
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .card-header {
+            background: transparent !important;
+            border-bottom: 1px solid var(--border-light);
+            padding: 1rem 1.25rem;
+            font-weight: 600;
+        }
+        
+        .card-metric {
+            background: linear-gradient(135deg, var(--dark-green) 0%, var(--accent-emerald) 100%);
+            color: white;
+            border: none;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .card-metric::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: shimmer 3s infinite;
+        }
+        
+        @keyframes shimmer {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(10%, 10%); }
+        }
+        
+        .card-metric .card-body {
+            padding: 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .card-metric h2, .card-metric h4, .card-metric h6 {
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+        
+        .card-metric h2 {
+            font-size: 2.5rem;
+        }
+        
+        @media (max-width: 576px) {
+            .card-metric h2 {
+                font-size: 1.8rem;
+            }
+        }
+        
+        /* Page Header Moderno */
+        .page-header {
+            background: linear-gradient(135deg, var(--navy-dark) 0%, var(--dark-green) 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+            box-shadow: var(--shadow-md);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .page-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="rgba(255,255,255,0.05)" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,112C672,96,768,96,864,112C960,128,1056,160,1152,165.3C1248,171,1344,149,1392,138.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') bottom center no-repeat;
+            background-size: cover;
+            pointer-events: none;
+        }
+        
+        @media (max-width: 767.98px) {
+            .page-header {
+                padding: 1.25rem 0;
+                margin-bottom: 1rem;
+                border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+            }
+            .page-header h2 {
+                font-size: 1.3rem;
+            }
+        }
+        
+        /* Botões Modernos */
+        .btn-primary {
+            background: linear-gradient(135deg, var(--dark-green) 0%, var(--accent-emerald) 100%);
+            border: none;
+            border-radius: var(--radius-sm);
+            padding: 10px 24px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, var(--darker-green) 0%, var(--dark-green) 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
+        }
+        
+        /* Tabelas Modernas */
+        .table {
+            background: var(--bg-card);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            border: 1px solid var(--border-light);
+        }
+        
+        .table thead {
+            background: linear-gradient(135deg, var(--navy-dark) 0%, var(--dark-green) 100%);
+            color: white;
+        }
+        
+        .table thead th {
+            font-weight: 600;
+            border: none;
+            padding: 1rem;
+        }
+        
+        .table tbody tr {
+            transition: all 0.2s ease;
+        }
+        
+        .table tbody tr:hover {
+            background: var(--success-light);
+            transform: scale(1.002);
+        }
+        
+        /* Barra de Cotação Moderna */
+        .cotacao-bar {
+            background: linear-gradient(90deg, var(--navy-dark) 0%, var(--dark-green) 50%, var(--accent-emerald) 100%);
+            color: white;
+            padding: 10px 0;
+            font-size: 14px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+        }
+        
+        .cotacao-bar .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: nowrap;
+            white-space: nowrap;
+        }
+        
+        @media (max-width: 576px) {
+            .cotacao-bar .container {
+                gap: 10px;
+                font-size: 12px;
+            }
+            .cotacao-label {
+                display: none;
+            }
+        }
+        
+        .cotacao-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .cotacao-item span:last-child {
+            font-weight: 700;
+            color: var(--harvest-gold);
+        }
+        
+        /* Sidebar Collapse Moderno */
+        @media (min-width: 768px) {
+            .sidebar.collapsed {
+                width: 70px !important;
+                min-width: 70px !important;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            .sidebar.collapsed .sidebar-text,
+            .sidebar.collapsed .sidebar-brand small,
+            .sidebar.collapsed .sidebar-brand h4 {
+                display: none;
+            }
+            .sidebar.collapsed .nav-link {
+                text-align: center;
+                padding: 12px 5px;
+                margin: 4px 5px;
+            }
+            .sidebar.collapsed .nav-icon {
+                font-size: 1.5rem;
+                margin-right: 0;
+            }
+            .sidebar:not(.collapsed) {
+                width: 16.666667%;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+        }
+        
+        .sidebar .nav-icon {
+            margin-right: 10px;
+            font-size: 1.2rem;
+        }
+        
+        .sidebar.collapsed .nav-icon {
+            margin-right: 0;
+        }
+        
+        /* Responsividade Adicional */
+        @media (max-width: 576px) {
+            .container.px-4 {
+                padding-left: 12px !important;
+                padding-right: 12px !important;
+            }
+            .table-responsive {
+                font-size: 0.85rem;
+            }
+        }
+        
+        /* Animações de Entrada */
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .card, .table {
+            animation: slideInUp 0.4s ease forwards;
+        }
+        
+        .card:nth-child(1) { animation-delay: 0.1s; }
+        .card:nth-child(2) { animation-delay: 0.2s; }
+        .card:nth-child(3) { animation-delay: 0.3s; }
+        .card:nth-child(4) { animation-delay: 0.4s; }
+        
+        /* Melhorias Dark Mode */
+        body.dark-mode .table {
+            background: var(--bg-card);
+            border-color: var(--border-light);
+        }
+        
+        body.dark-mode .form-control {
+            background: var(--bg-card);
+            border-color: var(--border-light);
+            color: var(--text-primary);
+        }
+        
+        body.dark-mode .form-control:focus {
+            background: var(--bg-card);
+            border-color: var(--primary-green);
+            color: var(--text-primary);
+        }
+        
+        /* Scrollbar Customizada */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--bg-light);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--dark-green);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--darker-green);
+        }
+        
+        /* Utilitários */
+        .nav-link { cursor: pointer; }
+        .text-gradient {
+            background: linear-gradient(135deg, var(--dark-green), var(--accent-emerald));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="{% if request.path == '/' %}page-dashboard{% elif request.path == '/login' %}page-login{% elif request.path == '/register' %}page-login{% elif '/animais' in request.path %}page-animais{% elif '/producao' in request.path %}page-producao{% elif '/racao' in request.path %}page-racao{% elif '/financeiro' in request.path %}page-financeiro{% elif '/relatorios' in request.path %}page-relatorios{% elif '/pastagens' in request.path %}page-pastagens{% else %}page-dashboard{% endif %} {% if request.cookies.get('darkMode') == 'true' %}dark-mode{% endif %}">
+    <div class="cotacao-bar">
+        <div class="container">
+            <div class="cotacao-item">
+                <span class="cotacao-label">🥛 Cotação:</span>
+                <span id="preco-leite">R$ {{ "%.2f"|format(preco_vigente_global) }}/L</span>
+            </div>
+            <div class="cotacao-item">
+                <span class="cotacao-label">📅:</span>
+                <span id="data-cotacao">{{ data_cotacao_global }}</span>
+            </div>
+            <div class="cotacao-item">
+                <span class="cotacao-label">📈:</span>
+                <span id="tendencia" style="color: #52B788;">Alta ▲</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="mobile-header d-md-none">
+        <div class="d-flex justify-content-between align-items-center">
+            <button class="btn btn-sm btn-outline-light" id="sidebarToggle">
+                ☰ Menu
+            </button>
+            <h5 class="text-white mb-0">🐄 Terra Roxa System</h5>
+            <button class="btn btn-sm btn-outline-light" id="darkModeToggle">
+                🌙
+            </button>
+        </div>
+    </div>
+    
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+     
+    <div class="container-fluid">
+        <div class="row">
+    <div class="col-md-2 sidebar p-0" id="sidebar">
+        <div class="p-3 text-center border-bottom border-white border-opacity-10 d-flex justify-content-between align-items-center">
+            <div class="sidebar-brand">
+                <div class="mb-1" style="font-size: 2rem;">🐄</div>
+                <h5 class="text-white mb-0 fw-bold sidebar-text">Terra Roxa</h5>
+                <small class="text-white-50 sidebar-text" style="font-size: 0.75rem;">Sistema de Gestão</small>
+            </div>
+            <button class="btn btn-sm btn-outline-light d-none d-md-block border-0" id="sidebarCollapse" title="Recolher menu" style="opacity: 0.7;">
+                ☰
+            </button>
+        </div>
+        <nav class="nav flex-column p-2 mt-2">
+            <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/" data-bs-toggle="tooltip" data-bs-placement="right" title="Painel">
+                <span class="nav-icon">📊</span>
+                <span class="sidebar-text">Painel</span>
+            </a>
+            <a class="nav-link {% if request.path == '/producao' %}active{% endif %}" href="/producao" data-bs-toggle="tooltip" data-bs-placement="right" title="Produção">
+                <span class="nav-icon">🥛</span>
+                <span class="sidebar-text">Produção</span>
+            </a>
+            <a class="nav-link {% if request.path == '/racao' or request.path == '/racao/consumo' %}active{% endif %}" href="/racao" data-bs-toggle="tooltip" data-bs-placement="right" title="Ração">
+                <span class="nav-icon">🌾</span>
+                <span class="sidebar-text">Ração</span>
+            </a>
+            <a class="nav-link {% if request.path == '/animais' %}active{% endif %}" href="/animais" data-bs-toggle="tooltip" data-bs-placement="right" title="Animais">
+                <span class="nav-icon">🐂</span>
+                <span class="sidebar-text">Animais</span>
+            </a>
+            <a class="nav-link {% if request.path == '/pastagens' %}active{% endif %}" href="/pastagens" data-bs-toggle="tooltip" data-bs-placement="right" title="Pastagens">
+                <span class="nav-icon">🌱</span>
+                <span class="sidebar-text">Pastagens</span>
+            </a>
+            <a class="nav-link {% if request.path == '/financeiro' %}active{% endif %}" href="/financeiro" data-bs-toggle="tooltip" data-bs-placement="right" title="Financeiro">
+                <span class="nav-icon">💰</span>
+                <span class="sidebar-text">Financeiro</span>
+            </a>
+            <a class="nav-link {% if request.path == '/orcamento' %}active{% endif %}" href="/orcamento" data-bs-toggle="tooltip" data-bs-placement="right" title="Orçamento">
+                <span class="nav-icon">📊</span>
+                <span class="sidebar-text">Orçamento</span>
+            </a>
+            <a class="nav-link {% if request.path == '/relatorios' %}active{% endif %}" href="/relatorios" data-bs-toggle="tooltip" data-bs-placement="right" title="Relatórios">
+                <span class="nav-icon">📈</span>
+                <span class="sidebar-text">Relatórios</span>
+            </a>
+            
+            <div class="sidebar-divider my-3" style="height: 1px; background: rgba(255,255,255,0.1); margin: 0 12px;"></div>
+            
+            {% if current_user.is_authenticated and current_user.role == 'admin' %}
+                <div class="mt-2 mb-1 text-uppercase small ps-3 sidebar-text" style="color: rgba(255,255,255,0.4); letter-spacing: 1px; font-size: 0.7rem;">Administração</div>
+                <a class="nav-link {% if request.path == '/admin/usuarios' %}active{% endif %}" href="/admin/usuarios" data-bs-toggle="tooltip" data-bs-placement="right" title="Usuários">
+                    <span class="nav-icon">👤</span>
+                    <span class="sidebar-text">Usuários</span>
+                </a>
+                <a class="nav-link {% if request.path == '/admin/auditoria' %}active{% endif %}" href="/admin/auditoria" data-bs-toggle="tooltip" data-bs-placement="right" title="Auditoria">
+                    <span class="nav-icon">📝</span>
+                    <span class="sidebar-text">Auditoria</span>
+                </a>
+                <a class="nav-link {% if request.path == '/admin/backup' %}active{% endif %}" href="/admin/backup" data-bs-toggle="tooltip" data-bs-placement="right" title="Backup">
+                    <span class="nav-icon">💾</span>
+                    <span class="sidebar-text">Backup</span>
+                </a>
+            {% endif %}
+            
+            <div class="sidebar-divider my-3" style="height: 1px; background: rgba(255,255,255,0.1); margin: 0 12px;"></div>
+            
+            <a class="nav-link" href="/ajustes" data-bs-toggle="tooltip" data-bs-placement="right" title="Ajustes">
+                <span class="nav-icon">⚙️</span>
+                <span class="sidebar-text">Ajustes</span>
+            </a>
+            <button class="nav-link text-start border-0 bg-transparent" id="darkModeToggleSidebar" data-bs-toggle="tooltip" data-bs-placement="right" title="Modo Escuro">
+                <span class="nav-icon">🌙</span>
+                <span class="sidebar-text">Modo Escuro</span>
+            </button>
+            <a class="nav-link" href="/logout" data-bs-toggle="tooltip" data-bs-placement="right" title="Sair">
+                <span class="nav-icon">🚪</span>
+                <span class="sidebar-text">Sair</span>
+            </a>
+        </nav>
+        <div class="mt-auto p-3 text-center sidebar-text" style="font-size: 0.7rem; color: rgba(255,255,255,0.3);">
+            v1.0 • Terra Roxa © 2026
+        </div>
+    </div>
+            <div class="col-md-10 p-0">
+                <div class="page-header">
+                    <div class="container">
+                        <h2 class="mb-0">{% block page_title %}Painel de Controle{% endblock %}</h2>
+                    </div>
+                </div>
+                <div class="container px-4">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                
+                    {% block content %}{% endblock %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Sidebar collapse functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.getElementById('sidebar');
+            const sidebarCollapse = document.getElementById('sidebarCollapse');
+            const mainContent = document.querySelector('.col-md-10');
+            
+            // Initialize tooltips for collapsed sidebar
+            function initTooltips() {
+                const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                tooltipTriggerList.map(function (tooltipTriggerEl) {
+                    return new bootstrap.Tooltip(tooltipTriggerEl);
+                });
+            }
+            
+            // Toggle sidebar collapse
+            if (sidebarCollapse) {
+                sidebarCollapse.addEventListener('click', function() {
+                    sidebar.classList.toggle('collapsed');
+                    
+                    // Adjust main content width
+                    if (sidebar.classList.contains('collapsed')) {
+                        mainContent.classList.remove('col-md-10');
+                        mainContent.classList.add('col-md-11', 'ms-auto');
+                        // Enable tooltips
+                        setTimeout(initTooltips, 300);
+                    } else {
+                        mainContent.classList.remove('col-md-11', 'ms-auto');
+                        mainContent.classList.add('col-md-10');
+                        // Dispose tooltips
+                        const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+                        tooltips.forEach(el => {
+                            const tooltip = bootstrap.Tooltip.getInstance(el);
+                            if (tooltip) tooltip.dispose();
+                        });
+                    }
+                    
+                    // Save preference
+                    localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+                });
+            }
+            
+            // Load saved preference
+            if (localStorage.getItem('sidebarCollapsed') === 'true') {
+                sidebar.classList.add('collapsed');
+                mainContent.classList.remove('col-md-10');
+                mainContent.classList.add('col-md-11', 'ms-auto');
+                setTimeout(initTooltips, 300);
+            }
+            
+            // Initialize tooltips if not collapsed
+            if (!sidebar.classList.contains('collapsed')) {
+                initTooltips();
+            }
+        });
+        
+        // Test if Bootstrap is loaded
+        window.addEventListener('load', function() {
+            if (typeof bootstrap === 'undefined') {
+                console.error('Bootstrap JS not loaded!');
+            } else {
+                console.log('Bootstrap loaded correctly');
+            }
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then(registration => {
+                        console.log('SW registered:', registration);
+                    })
+                    .catch(error => {
+                        console.log('SW registration failed:', error);
+                    });
+            });
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.getElementById('sidebar');
+            const sidebarOverlay = document.getElementById('sidebarOverlay');
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const darkModeToggle = document.getElementById('darkModeToggle');
+            const darkModeToggleSidebar = document.getElementById('darkModeToggleSidebar');
+            
+            // Dark Mode toggle
+            function toggleDarkMode() {
+                document.body.classList.toggle('dark-mode');
+                const isDarkMode = document.body.classList.contains('dark-mode');
+                localStorage.setItem('darkMode', isDarkMode);
+                if (darkModeToggleSidebar) {
+                    darkModeToggleSidebar.innerHTML = isDarkMode ? '☀️ Modo Claro' : '🌙 Modo Escuro';
+                }
+            }
+            
+            // Load dark mode preference
+            if (localStorage.getItem('darkMode') === 'true') {
+                document.body.classList.add('dark-mode');
+                if (darkModeToggleSidebar) {
+                    darkModeToggleSidebar.innerHTML = '☀️ Modo Claro';
+                }
+            }
+            
+            if (darkModeToggle) {
+                darkModeToggle.addEventListener('click', toggleDarkMode);
+            }
+            if (darkModeToggleSidebar) {
+                darkModeToggleSidebar.addEventListener('click', toggleDarkMode);
+            }
+            
+            if (sidebarToggle) {
+                sidebarToggle.addEventListener('click', function() {
+                    sidebar.classList.toggle('show');
+                    sidebarOverlay.classList.toggle('show');
+                });
+            }
+            
+            if (sidebarOverlay) {
+                sidebarOverlay.addEventListener('click', function() {
+                    sidebar.classList.remove('show');
+                    sidebarOverlay.classList.remove('show');
+                });
+            }
+            
+            const sidebarLinks = sidebar.querySelectorAll('.nav-link');
+            sidebarLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    if (window.innerWidth < 768) {
+                        sidebar.classList.remove('show');
+                        sidebarOverlay.classList.remove('show');
+                    }
+                });
+            });
+        });
+        
+        async function atualizarCotacao() {
+            try {
+                const response = await fetch('/api/cotacao-leite');
+                const dados = await response.json();
+                
+                document.getElementById('preco-leite').textContent = 'R$ ' + dados.preco.toFixed(2) + '/L';
+                document.getElementById('data-cotacao').textContent = dados.data;
+                
+                const tendenciaEl = document.getElementById('tendencia');
+                if (dados.tendencia === 'alta') {
+                    tendenciaEl.textContent = 'Alta ▲';
+                    tendenciaEl.style.color = '#52B788';
+                } else {
+                    tendenciaEl.textContent = 'Baixa ▼';
+                    tendenciaEl.style.color = '#e74c3c';
+                }
+            } catch (e) {
+                console.log('Erro ao buscar cotação:', e);
+            }
+        }
+        atualizarCotacao();
+        setInterval(atualizarCotacao, 300000);
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
