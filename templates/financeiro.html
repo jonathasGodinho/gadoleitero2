@@ -1,67 +1,55 @@
 {% extends "base.html" %}
 {% block title %}Financeiro - Terra Roxa System{% endblock %}
+{% block page_title %}💰 Financeiro{% endblock %}
+
 {% block content %}
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2 style="color: #2C3E50;">💰 Financeiro</h2>
-                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#novaDespesaModal">
-                    ➕ Nova Despesa
-                </button>
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card card-metric" style="background: linear-gradient(135deg, #27AE60 0%, #1E8449 100%);">
+            <div class="card-body">
+                <h6 class="opacity-75">Total Despesas</h6>
+                <h2 class="h4">R$ {{ "%.2f"|format(total_despesas) }}</h2>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Resumo Financeiro -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card bg-success text-white">
-                <div class="card-body">
-                    <h6 class="card-title">Total Despesas</h6>
-                    <h3>R$ {{ "%.2f"|format(total_despesas) }}</h3>
-                </div>
-            </div>
-        </div>
+<div class="card mb-4">
+    <div class="card-header bg-transparent d-flex justify-content-between align-items-center" style="border-bottom: 2px solid var(--border-light);">
+        <h5 class="mb-0">📋 Despesas Cadastradas</h5>
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#novaDespesaModal">➕ Nova Despesa</button>
     </div>
-
-    <!-- Lista de Despesas -->
-    <div class="card">
-        <div class="card-header" style="background-color: #2C3E50; color: white;">
-            <h5 class="mb-0">📋 Despesas Cadastradas</h5>
+    <div class="card-body p-0">
+        {% if despesas %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Descrição</th>
+                        <th>Categoria</th>
+                        <th>Valor</th>
+                        <th>Data</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in despesas %}
+                    <tr>
+                        <td>{{ d.descricao }}</td>
+                        <td><span class="badge bg-info">{{ d.categoria }}</span></td>
+                        <td>R$ {{ "%.2f"|format(d.valor) }}</td>
+                        <td>{{ d.data.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            <a href="/financeiro/excluir/{{ d.id }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Excluir despesa?')">✕</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
-        <div class="card-body">
-            {% if despesas %}
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Descrição</th>
-                            <th>Categoria</th>
-                            <th>Valor</th>
-                            <th>Data</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for d in despesas %}
-                        <tr>
-                            <td>{{ d.descricao }}</td>
-                            <td><span class="badge bg-info">{{ d.categoria }}</span></td>
-                            <td>R$ {{ "%.2f"|format(d.valor) }}</td>
-                            <td>{{ d.data.strftime('%d/%m/%Y') }}</td>
-                            <td>
-                                <button class="btn btn-sm btn-danger">Excluir</button>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-            <p class="text-muted text-center py-4">Nenhuma despesa cadastrada ainda.</p>
-            {% endif %}
-        </div>
+        {% else %}
+        <div class="text-center py-4 text-muted">Nenhuma despesa cadastrada ainda.</div>
+        {% endif %}
     </div>
 </div>
 
@@ -69,11 +57,11 @@
 <div class="modal fade" id="novaDespesaModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header" style="background-color: #27AE60; color: white;">
+            <div class="modal-header" style="background: var(--dark-green); color: white;">
                 <h5 class="modal-title">➕ Nova Despesa</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="/financeiro/nova">
+            <form method="POST" action="/financeiro">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Descrição</label>
@@ -95,7 +83,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Data</label>
-                        <input type="date" name="data" class="form-control" value="{{ today.isoformat() }}" required>
+                        <input type="date" name="data" class="form-control" value="{{ today }}" required>
                     </div>
                 </div>
                 <div class="modal-footer">

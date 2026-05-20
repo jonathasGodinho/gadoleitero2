@@ -14,6 +14,11 @@ env/
 Thumbs.db
 error.txt
 output.txt
+output2.txt
+
+# Scripts locais
+deploy-render.bat
+start_server.bat
 
 # IDE
 .vscode/

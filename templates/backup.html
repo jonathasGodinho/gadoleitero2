@@ -1,45 +1,19 @@
 {% extends "base.html" %}
 {% block title %}Backup - Terra Roxa System{% endblock %}
+{% block page_title %}💾 Backup do Sistema{% endblock %}
+
 {% block content %}
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <h2 style="color: #2C3E50;" class="mb-4">💾 Backup do Sistema</h2>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header" style="background-color: #27AE60; color: white;">
-                    <h5 class="mb-0">📥 Backup Completo (SQL)</h5>
-                </div>
-                <div class="card-body">
-                    <p class="card-text">Baixa um arquivo SQL com todo o conteúdo do banco de dados.</p>
-                    <a href="/admin/backup/sql" class="btn btn-success">⬇️ Baixar SQL</a>
-                </div>
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header bg-transparent">
+                <h5 class="mb-0">📥 Backup de Dados</h5>
             </div>
-        </div>
-
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header" style="background-color: #3498DB; color: white;">
-                    <h5 class="mb-0">📊 Backup de Dados (Excel)</h5>
+            <div class="card-body d-flex flex-column">
+                <p class="card-text">Baixa um arquivo JSON com todos os registros do banco de dados.</p>
+                <div class="mt-auto">
+                    <a href="/admin/backup" class="btn btn-success">⬇️ Baixar Backup</a>
                 </div>
-                <div class="card-body">
-                    <p class="card-text">Exporta as tabelas principais para um arquivo Excel.</p>
-                    <a href="/admin/backup/excel" class="btn btn-primary">⬇️ Baixar Excel</a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="alert alert-info">
-                <h6>ℹ️ Informações do Banco</h6>
-                <p class="mb-0">Local: <code>gadoleiteiro.db</code></p>
-                <p class="mb-0">Tamanho: {{ (DBMS_SIZE / 1024) | round(2) }} KB</p>
             </div>
         </div>
     </div>

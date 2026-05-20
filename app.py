@@ -16,13 +16,19 @@ app.secret_key = os.environ.get('SECRET_KEY', 'terra-roxa-sistema-2024')
 # Configuração de banco: PostgreSQL (produção) ou SQLite (desenvolvimento)
 database_url = os.environ.get('DATABASE_URL')
 if database_url:
-    # Render/Heroku usam postgres:// mas SQLAlchemy precisa de postgresql://
     if database_url.startswith('postgres://'):
         database_url = database_url.replace('postgres://', 'postgresql://', 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 else:
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///gadoleiteiro.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Configurações de produção
+if os.environ.get('RENDER') or os.environ.get('FLASK_ENV') == 'production':
+    app.config['SESSION_COOKIE_SECURE'] = True
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    app.config['JSON_AS_ASCII'] = False
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
@@ -57,15 +63,11 @@ class Animal(db.Model):
     raca = db.Column(db.String(100))
     sexo = db.Column(db.String(10))  # macho, femea
     lote = db.Column(db.String(50))  # filhote
-    data_nascimento = db.Column(db.Date)
     ativo = db.Column(db.Boolean, default=True)
     # Reprodução
     data_ultima_inseminacao = db.Column(db.Date)
     data_parto_prevista = db.Column(db.Date)
     status_reproducao = db.Column(db.String(50), default='vazio')  # vazio, prenha, seca, etc.
-    # Pastagem
-    lote_pastagem = db.Column(db.String(50))
-    rotacao_pastagem = db.Column(db.String(100))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class SaudeAnimal(db.Model):
@@ -80,17 +82,6 @@ class SaudeAnimal(db.Model):
     animal = db.relationship('Animal', backref='saude_registros')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-class Pastagem(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    lote = db.Column(db.String(50), nullable=False)
-    area_ha = db.Column(db.Numeric(10, 2))
-    tipo_forrageira = db.Column(db.String(100))
-    data_plantio = db.Column(db.Date)
-    data_rotacao = db.Column(db.Date)
-    fertilizacao = db.Column(db.String(200))
-    observacoes = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
 class TipoRacao(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(100), nullable=False)
@@ -100,12 +91,13 @@ class TipoRacao(db.Model):
 
 class ProducaoLeite(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    animal_id = db.Column(db.Integer, db.ForeignKey('animal.id'), nullable=False)
+    animal_id = db.Column(db.Integer, db.ForeignKey('animal.id'), nullable=True)
     litros = db.Column(db.Numeric(10, 2), nullable=False)
     gordura = db.Column(db.Numeric(5, 2))  # % gordura
     proteina = db.Column(db.Numeric(5, 2))  # % proteína
     ccs = db.Column(db.Numeric(10, 2))  # Contagem de Células Somáticas
     preco_venda = db.Column(db.Numeric(10, 4))
+    total_receber = db.Column(db.Numeric(10, 2))
     data = db.Column(db.Date, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     animal = db.relationship('Animal', backref='producoes')
@@ -143,6 +135,24 @@ class Orcamento(db.Model):
     categoria = db.Column(db.String(50))
     valor_previsto = db.Column(db.Numeric(10, 2))
     valor_realizado = db.Column(db.Numeric(10, 2))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Cliente(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(200), nullable=False)
+    telefone = db.Column(db.String(50))
+    email = db.Column(db.String(150))
+    endereco = db.Column(db.String(300))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    vendas = db.relationship('VendaAvulsa', backref='cliente', lazy=True)
+
+class VendaAvulsa(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    cliente_id = db.Column(db.Integer, db.ForeignKey('cliente.id'), nullable=False)
+    data = db.Column(db.Date, nullable=False)
+    litros = db.Column(db.Numeric(10, 2), nullable=False)
+    valor_litro = db.Column(db.Numeric(10, 4), nullable=False)
+    total = db.Column(db.Numeric(10, 2), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 # ========== FUNÇÕES AUXILIARES ==========
@@ -286,7 +296,7 @@ def index():
     # Métricas de hoje
     producoesHoje = ProducaoLeite.query.filter_by(data=today).all()
     total_litros = sum(p.litros for p in producoesHoje)
-    num_animais_produzindo = len(set(p.animal_id for p in producoesHoje))
+    num_animais_produzindo = len(set(p.animal_id for p in producoesHoje if p.animal_id))
     
     consumoHoje = ConsumoRacao.query.filter_by(data=today).all()
     total_custo_racao = sum(c.custo for c in consumoHoje)
@@ -340,7 +350,8 @@ def index():
         d = date.today() - timedelta(days=i)
         prods = ProducaoLeite.query.filter_by(data=d).all()
         for p in prods:
-            prod_por_animal[p.animal.nome] += float(p.litros)
+            nome_animal = p.animal.nome if p.animal else 'Produção Geral'
+            prod_por_animal[nome_animal] += float(p.litros)
     
     top_animais = sorted(prod_por_animal.items(), key=lambda x: x[1], reverse=True)[:3]
     
@@ -498,7 +509,8 @@ def relatorio_pdf():
             from collections import defaultdict
             prod_animal = defaultdict(float)
             for p in producoes:
-                prod_animal[p.animal.nome] += float(p.litros)
+                nome_animal = p.animal.nome if p.animal else 'Produção Geral'
+                prod_animal[nome_animal] += float(p.litros)
             
             top5 = sorted(prod_animal.items(), key=lambda x: x[1], reverse=True)[:5]
             
@@ -689,47 +701,43 @@ def logout():
 @login_required
 def producao():
     if request.method == 'POST':
-        animal_id = request.form.get('animal_id')
         litros = float(request.form.get('litros'))
         data = datetime.strptime(request.form.get('data'), '%Y-%m-%d').date()
-        preco_venda = float(request.form.get('preco_venda')) if request.form.get('preco_venda') else None
-        gordura = float(request.form.get('gordura')) if request.form.get('gordura') else None
-        proteina = float(request.form.get('proteina')) if request.form.get('proteina') else None
-        ccs = float(request.form.get('ccs')) if request.form.get('ccs') else None
+        preco_venda = float(request.form.get('preco_venda')) if request.form.get('preco_venda') else 2.20
+        total_receber = round(litros * preco_venda, 2)
         
         nova_producao = ProducaoLeite(
-            animal_id=animal_id, litros=litros, data=data, 
-            preco_venda=preco_venda, gordura=gordura,
-            proteina=proteina, ccs=ccs
+            animal_id=None, litros=litros, data=data, 
+            preco_venda=preco_venda,
+            total_receber=total_receber
         )
         db.session.add(nova_producao)
         db.session.commit()
-        log_auditoria('Produção registrada', f'Animal ID {animal_id}, {litros}L')
+        log_auditoria('Produção registrada', f'{litros}L a R$ {preco_venda}/L')
         flash('Produção registrada com sucesso!', 'success')
         return redirect(url_for('producao'))
     
-    animais = Animal.query.filter_by(ativo=True).all()
     filtro_data_ini = request.args.get('data_ini')
     filtro_data_fim = request.args.get('data_fim')
-    filtro_animal = request.args.get('animal_id')
     
     query = ProducaoLeite.query
     if filtro_data_ini:
         query = query.filter(ProducaoLeite.data >= datetime.strptime(filtro_data_ini, '%Y-%m-%d').date())
     if filtro_data_fim:
         query = query.filter(ProducaoLeite.data <= datetime.strptime(filtro_data_fim, '%Y-%m-%d').date())
-    if filtro_animal:
-        query = query.filter(ProducaoLeite.animal_id == filtro_animal)
     
     producoes = query.order_by(ProducaoLeite.data.desc()).all()
     today = date.today().strftime('%Y-%m-%d')
     
+    total_litros_geral = sum(float(p.litros) for p in producoes)
+    total_receber_geral = sum(float(p.total_receber) for p in producoes if p.total_receber)
+    
     return render_template('producao.html', 
-                           animais=animais, 
                            producoes=producoes, 
                            today=today,
-                           get_preco_vigente=get_preco_vigente,
-                           float=float)
+                           preco_padrao=2.20,
+                           total_litros_geral=total_litros_geral,
+                           total_receber_geral=total_receber_geral)
 
 @app.route('/producao/excluir/<int:id>')
 @login_required
@@ -763,6 +771,26 @@ def racao():
     
     tipos = TipoRacao.query.all()
     return render_template('racao.html', tipos=tipos)
+
+@app.route('/racao/excluir/<int:id>')
+@login_required
+def excluir_racao(id):
+    tipo = TipoRacao.query.get_or_404(id)
+    db.session.delete(tipo)
+    db.session.commit()
+    log_auditoria('Tipo ração excluído', f'{tipo.nome}')
+    flash('Tipo de ração excluído!', 'success')
+    return redirect(url_for('racao'))
+
+@app.route('/racao/consumo/excluir/<int:id>')
+@login_required
+def excluir_consumo_racao(id):
+    consumo = ConsumoRacao.query.get_or_404(id)
+    db.session.delete(consumo)
+    db.session.commit()
+    log_auditoria('Consumo ração excluído', f'ID {id}')
+    flash('Consumo excluído!', 'success')
+    return redirect(url_for('consumo_racao'))
 
 @app.route('/racao/consumo', methods=['GET', 'POST'])
 @login_required
@@ -805,7 +833,8 @@ def consumo_racao():
     
     consumos = query.order_by(ConsumoRacao.data.desc()).all()
     
-    return render_template('consumo_racao.html', animais=animais, tipos=tipos, consumos=consumos)
+    today = date.today().strftime('%Y-%m-%d')
+    return render_template('consumo_racao.html', animais=animais, tipos=tipos, consumos=consumos, today=today)
 
 # ========== ANIMAIS ==========
 
@@ -815,14 +844,16 @@ def animais():
     if request.method == 'POST':
         nome = request.form.get('nome')
         brinco = request.form.get('brinco')
+        if not brinco:
+            ultimo = Animal.query.order_by(Animal.id.desc()).first()
+            prox_id = (ultimo.id + 1) if ultimo else 1
+            brinco = f'AUTO-{prox_id:04d}'
         raca = request.form.get('raca')
         lote = request.form.get('lote')
         sexo = request.form.get('sexo')
-        data_nasc = datetime.strptime(request.form.get('data_nascimento'), '%Y-%m-%d').date() if request.form.get('data_nascimento') else None
-        
         novo_animal = Animal(
             nome=nome, brinco=brinco, raca=raca, lote=lote,
-            sexo=sexo, data_nascimento=data_nasc
+            sexo=sexo
         )
         db.session.add(novo_animal)
         db.session.commit()
@@ -832,6 +863,37 @@ def animais():
     
     animais = Animal.query.order_by(Animal.nome).all()
     return render_template('animais.html', animais=animais)
+
+@app.route('/animais/editar/<int:id>', methods=['POST'])
+@login_required
+def editar_animal(id):
+    animal = Animal.query.get_or_404(id)
+    animal.nome = request.form.get('nome', animal.nome)
+    animal.raca = request.form.get('raca', animal.raca)
+    animal.sexo = request.form.get('sexo', animal.sexo)
+    animal.lote = request.form.get('lote', animal.lote)
+    animal.ativo = request.form.get('ativo') == 'on'
+    db.session.commit()
+    log_auditoria('Animal editado', f'{animal.nome} - Brinco {animal.brinco}')
+    flash('Animal atualizado!', 'success')
+    return redirect(url_for('animais'))
+
+@app.route('/animais/excluir/<int:id>')
+@login_required
+def excluir_animal(id):
+    animal = Animal.query.get_or_404(id)
+    try:
+        SaudeAnimal.query.filter_by(animal_id=id).delete()
+        ConsumoRacao.query.filter_by(animal_id=id).delete()
+        ProducaoLeite.query.filter_by(animal_id=id).delete()
+        db.session.delete(animal)
+        db.session.commit()
+        log_auditoria('Animal excluído', f'{animal.nome} - Brinco {animal.brinco}')
+        flash('Animal excluído!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao excluir animal: {str(e)}', 'danger')
+    return redirect(url_for('animais'))
 
 @app.route('/animais/saude/<int:id>', methods=['GET', 'POST'])
 @login_required
@@ -862,38 +924,12 @@ def saude_animal(id):
     return render_template('saude_animal.html', animal=animal, registros=registros, today=date.today())
 
 # ========== RELATÓRIOS ==========
-
-@app.route('/pastagens', methods=['GET', 'POST'])
-@login_required
-def pastagens():
-    if request.method == 'POST':
-        lote = request.form.get('lote')
-        area_ha = float(request.form.get('area_ha'))
-        tipo_forrageira = request.form.get('tipo_forrageira')
-        data_plantio = datetime.strptime(request.form.get('data_plantio'), '%Y-%m-%d').date() if request.form.get('data_plantio') else None
-        fertilizacao = request.form.get('fertilizacao')
-        
-        pastagem = Pastagem(
-            lote=lote,
-            area_ha=area_ha,
-            tipo_forrageira=tipo_forrageira,
-            data_plantio=data_plantio,
-            fertilizacao=fertilizacao
-        )
-        db.session.add(pastagem)
-        db.session.commit()
-        log_auditoria('Pastagem cadastrada', f'Lote {lote} - {area_ha}ha')
-        flash('Pastagem cadastrada!', 'success')
-        return redirect(url_for('pastagens'))
-    
-    pastagens = Pastagem.query.order_by(Pastagem.lote).all()
-    return render_template('pastagens.html', pastagens=pastagens)
-
 @app.route('/relatorios')
 @login_required
 def relatorios():
     data_ini = request.args.get('data_ini')
     data_fim = request.args.get('data_fim')
+    tipo = request.args.get('tipo', 'producao')
     
     if not data_ini:
         data_ini = date.today().replace(day=1).strftime('%Y-%m-%d')
@@ -902,6 +938,33 @@ def relatorios():
     
     data_ini_date = datetime.strptime(data_ini, '%Y-%m-%d').date()
     data_fim_date = datetime.strptime(data_fim, '%Y-%m-%d').date()
+    
+    if tipo == 'vendas-avulsas':
+        vendas = VendaAvulsa.query.filter(
+            VendaAvulsa.data >= data_ini_date, VendaAvulsa.data <= data_fim_date
+        ).order_by(VendaAvulsa.data.desc()).all()
+        
+        total_litros_vendas = sum(float(v.litros) for v in vendas)
+        total_valor_vendas = sum(float(v.total) for v in vendas)
+        
+        dias_grafico = []
+        valores_venda = []
+        delta = data_fim_date - data_ini_date
+        if delta.days <= 31:
+            for i in range(delta.days + 1):
+                d = data_ini_date + timedelta(days=i)
+                dias_grafico.append(d.strftime('%d/%m'))
+                vals_dia = [float(v.total) for v in vendas if v.data == d]
+                valores_venda.append(sum(vals_dia))
+        
+        return render_template('relatorios.html',
+                               data_ini=data_ini, data_fim=data_fim,
+                               tipo=tipo,
+                               vendas=vendas,
+                               total_litros_vendas=total_litros_vendas,
+                               total_valor_vendas=total_valor_vendas,
+                               dias_grafico=dias_grafico,
+                               valores_venda=valores_venda)
     
     producoes = ProducaoLeite.query.filter(
         ProducaoLeite.data >= data_ini_date, ProducaoLeite.data <= data_fim_date
@@ -945,15 +1008,29 @@ def relatorios():
         tipo_nome = c.tipo_racao.nome
         custo_por_tipo[tipo_nome] = custo_por_tipo.get(tipo_nome, 0) + float(c.custo)
     
+    preco_medio = get_preco_vigente(data_fim_date)
+
     return render_template('relatorios.html',
                            data_ini=data_ini, data_fim=data_fim,
+                           tipo=tipo,
                            total_litros=total_litros, receita=receita,
                            custo=custo_total, lucro=lucro,
                            custo_producao=custo_producao,
                            dias_grafico=dias_grafico, valores_prod=valores_prod,
-                           custos_dia=custos_dia, custo_por_tipo=custo_por_tipo)
+                           custos_dia=custos_dia, custo_por_tipo=custo_por_tipo,
+                           preco_medio=preco_medio)
 
 # ========== FINANCEIRO ==========
+
+@app.route('/financeiro/excluir/<int:id>')
+@login_required
+def excluir_despesa(id):
+    despesa = Despesa.query.get_or_404(id)
+    db.session.delete(despesa)
+    db.session.commit()
+    log_auditoria('Despesa excluída', f'{despesa.descricao} - R$ {despesa.valor}')
+    flash('Despesa excluída!', 'success')
+    return redirect(url_for('financeiro'))
 
 @app.route('/financeiro', methods=['GET', 'POST'])
 @login_required
@@ -993,6 +1070,35 @@ def financeiro():
     
     from datetime import date
     return render_template('financeiro.html', despesas=despesas, total_despesas=total_despesas, today=date.today())
+
+@app.route('/ajustes/reset', methods=['POST'])
+@login_required
+def reset_dados():
+    if current_user.role not in ['admin', 'gerente']:
+        flash('Acesso restrito', 'danger')
+        return redirect(url_for('ajustes'))
+
+    tipo = request.form.get('tipo', '')
+    try:
+        if tipo == 'producao':
+            ProducaoLeite.query.delete()
+            flash('Dados de produção limpos!', 'success')
+        elif tipo == 'racao':
+            ConsumoRacao.query.delete()
+            flash('Dados de ração limpos!', 'success')
+        elif tipo == 'todos':
+            ProducaoLeite.query.delete()
+            ConsumoRacao.query.delete()
+            Despesa.query.delete()
+            VendaAvulsa.query.delete()
+            SaudeAnimal.query.delete()
+            flash('Todos os dados foram limpos!', 'success')
+        db.session.commit()
+        log_auditoria('Reset dados', f'Tipo: {tipo}')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao limpar dados: {str(e)}', 'danger')
+    return redirect(url_for('ajustes'))
 
 # ========== CONFIGURAÇÕES ==========
 
@@ -1062,6 +1168,78 @@ def admin_usuarios():
     usuarios = User.query.order_by(User.created_at.desc()).all()
     return render_template('admin_usuarios.html', usuarios=usuarios)
 
+@app.route('/admin/usuario/criar', methods=['POST'])
+@login_required
+def admin_usuario_criar():
+    if current_user.role != 'admin':
+        flash('Acesso restrito', 'danger')
+        return redirect(url_for('index'))
+    from werkzeug.security import generate_password_hash
+    nome = request.form.get('nome')
+    email = request.form.get('email')
+    senha = request.form.get('senha')
+    is_admin = request.form.get('is_admin') == 'on'
+    if User.query.filter_by(email=email).first():
+        flash('Email já cadastrado', 'danger')
+        return redirect(url_for('admin_usuarios'))
+    user = User(nome=nome, email=email, senha_hash=generate_password_hash(senha), is_admin=is_admin, role='admin' if is_admin else 'operador')
+    db.session.add(user)
+    db.session.commit()
+    log_auditoria('Usuário criado', f'{email}')
+    flash('Usuário criado!', 'success')
+    return redirect(url_for('admin_usuarios'))
+
+@app.route('/admin/usuario/editar/<int:id>', methods=['POST'])
+@login_required
+def admin_usuario_editar(id):
+    if current_user.role != 'admin':
+        flash('Acesso restrito', 'danger')
+        return redirect(url_for('index'))
+    from werkzeug.security import generate_password_hash
+    user = User.query.get_or_404(id)
+    user.nome = request.form.get('nome')
+    user.email = request.form.get('email')
+    senha = request.form.get('senha')
+    if senha:
+        user.senha_hash = generate_password_hash(senha)
+    user.is_admin = request.form.get('is_admin') == 'on'
+    user.role = 'admin' if user.is_admin else 'operador'
+    db.session.commit()
+    log_auditoria('Usuário editado', f'{user.email}')
+    flash('Usuário atualizado!', 'success')
+    return redirect(url_for('admin_usuarios'))
+
+@app.route('/admin/usuario/trocar-senha/<int:id>', methods=['POST'])
+@login_required
+def admin_usuario_trocar_senha(id):
+    if current_user.role != 'admin':
+        flash('Acesso restrito', 'danger')
+        return redirect(url_for('index'))
+    from werkzeug.security import generate_password_hash
+    user = User.query.get_or_404(id)
+    nova_senha = request.form.get('nova_senha')
+    user.senha_hash = generate_password_hash(nova_senha)
+    db.session.commit()
+    log_auditoria('Senha alterada', f'{user.email}')
+    flash('Senha alterada!', 'success')
+    return redirect(url_for('admin_usuarios'))
+
+@app.route('/admin/usuario/excluir/<int:id>')
+@login_required
+def admin_usuario_excluir(id):
+    if current_user.role != 'admin':
+        flash('Acesso restrito', 'danger')
+        return redirect(url_for('index'))
+    user = User.query.get_or_404(id)
+    if user.id == current_user.id:
+        flash('Você não pode excluir a si mesmo!', 'danger')
+        return redirect(url_for('admin_usuarios'))
+    db.session.delete(user)
+    db.session.commit()
+    log_auditoria('Usuário excluído', f'{user.email}')
+    flash('Usuário excluído!', 'success')
+    return redirect(url_for('admin_usuarios'))
+
 @app.route('/admin/auditoria')
 @login_required
 def auditoria():
@@ -1082,59 +1260,110 @@ def backup():
         return redirect(url_for('index'))
     
     from datetime import datetime
-    backup_name = f'backup_terra_roxa_{datetime.now().strftime("%Y%m%d_%H%M%S")}.sql'
+    backup_name = f'backup_terra_roxa_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
     
-    # Use Python's sqlite3 module instead of command-line tool
-    import sqlite3
-    conn = sqlite3.connect('gadoleiteiro.db')
-    with open('backup_temp.sql', 'w') as f:
-        for line in conn.iterdump():
-            f.write(f'{line}\n')
-    conn.close()
+    # Backup via SQLAlchemy (funciona com PostgreSQL e SQLite)
+    from sqlalchemy import inspect
+    buffer = []
+    for table_name in ['animal', 'tipo_racao', 'producao_leite', 'consumo_racao',
+                       'preco_leite', 'despesa', 'orcamento', 'user', 'audit_log',
+                       'cliente', 'venda_avulsa', 'saude_animal']:
+        try:
+            table = db.metadata.tables.get(table_name)
+            if table is None:
+                continue
+            rows = db.session.execute(table.select()).fetchall()
+            for row in rows:
+                buffer.append(f'-- {table_name}')
+                buffer.append(str(dict(row._mapping)))
+        except Exception:
+            pass
     
-    with open('backup_temp.sql', 'r') as f:
-        sql_content = f.read()
-    
-    import os
-    os.remove('backup_temp.sql')
+    sql_content = '\n'.join(buffer)
     
     response = make_response(sql_content)
     response.headers['Content-Disposition'] = f'attachment; filename={backup_name}'
-    response.headers['Content-Type'] = 'application/sql'
+    response.headers['Content-Type'] = 'application/json'
     log_auditoria('Backup realizado', f'Arquivo: {backup_name}')
     return response
 
+# ========== VENDAS AVULSAS ==========
+
+@app.route('/vendas-avulsas', methods=['GET', 'POST'])
+@login_required
+def vendas_avulsas():
+    from datetime import date
+    if request.method == 'POST':
+        acao = request.form.get('acao')
+
+        if acao == 'cliente':
+            nome = request.form.get('nome')
+            if Cliente.query.filter_by(nome=nome).first():
+                flash('Cliente já cadastrado!', 'danger')
+                return redirect(url_for('vendas_avulsas'))
+            cliente = Cliente(nome=nome)
+            db.session.add(cliente)
+            db.session.commit()
+            log_auditoria('Cliente cadastrado', f'{nome}')
+            flash('Cliente cadastrado com sucesso!', 'success')
+            return redirect(url_for('vendas_avulsas'))
+
+        elif acao == 'venda':
+            cliente_id = request.form.get('cliente_id')
+            data = datetime.strptime(request.form.get('data'), '%Y-%m-%d').date()
+            litros = float(request.form.get('litros'))
+            valor_litro = float(request.form.get('valor_litro'))
+            total = round(litros * valor_litro, 2)
+            venda = VendaAvulsa(cliente_id=cliente_id, data=data, litros=litros, valor_litro=valor_litro, total=total)
+            db.session.add(venda)
+            db.session.commit()
+            log_auditoria('Venda avulsa registrada', f'{litros}L - R$ {total}')
+            flash('Venda registrada com sucesso!', 'success')
+            return redirect(url_for('vendas_avulsas'))
+
+    clientes = Cliente.query.order_by(Cliente.nome).all()
+    vendas = VendaAvulsa.query.order_by(VendaAvulsa.data.desc()).all()
+    total_litros_geral = sum(float(v.litros) for v in vendas)
+    total_valor_geral = sum(float(v.total) for v in vendas)
+    return render_template('vendas_avulsas.html', clientes=clientes, vendas=vendas,
+                           total_litros_geral=total_litros_geral,
+                           total_valor_geral=total_valor_geral,
+                           today=date.today())
+
+@app.route('/vendas-avulsas/excluir-cliente/<int:id>')
+@login_required
+def excluir_cliente(id):
+    cliente = Cliente.query.get_or_404(id)
+    VendaAvulsa.query.filter_by(cliente_id=id).delete()
+    db.session.delete(cliente)
+    db.session.commit()
+    flash('Cliente excluído!', 'success')
+    return redirect(url_for('vendas_avulsas'))
+
+@app.route('/vendas-avulsas/editar/<int:id>', methods=['POST'])
+@login_required
+def editar_venda_avulsa(id):
+    venda = VendaAvulsa.query.get_or_404(id)
+    venda.cliente_id = request.form.get('cliente_id')
+    venda.data = datetime.strptime(request.form.get('data'), '%Y-%m-%d').date()
+    venda.valor_litro = float(request.form.get('valor_litro'))
+    venda.litros = float(request.form.get('litros'))
+    venda.total = round(venda.litros * venda.valor_litro, 2)
+    db.session.commit()
+    log_auditoria('Venda editada', f'{venda.litros}L - R$ {venda.total}')
+    flash('Venda atualizada!', 'success')
+    return redirect(url_for('vendas_avulsas'))
+
+@app.route('/vendas-avulsas/excluir/<int:id>')
+@login_required
+def excluir_venda_avulsa(id):
+    venda = VendaAvulsa.query.get(id)
+    db.session.delete(venda)
+    db.session.commit()
+    flash('Venda excluída!', 'success')
+    return redirect(url_for('vendas_avulsas'))
+
 if __name__ == '__main__':
-    with app.app_context():
-        # Comentado: usar Flask-Migrate em produção
-        db.create_all()
-        
-        # Dados iniciais
-        if not Animal.query.first():
-            db.session.add(Animal(nome='Bella', brinco='001', raca='Holandesa', lote='Lote A'))
-            db.session.add(Animal(nome='Mimosa', brinco='002', raca='Girolanda', lote='Lote A'))
-            db.session.add(Animal(nome='Estrela', brinco='003', raca='Jersey', lote='Lote B'))
-        
-        if not TipoRacao.query.first():
-            db.session.add(TipoRacao(nome='Ração Padrão', preco_kg=3.50, tipo='concentrado'))
-            db.session.add(TipoRacao(nome='Ração Premium', preco_kg=5.00, tipo='concentrado'))
-        
-        if not PrecoLeite.query.first():
-            db.session.add(PrecoLeite(preco_litro=2.50, data_vigencia=date(2024, 1, 1)))
-        
-        # Admin padrão
-        from werkzeug.security import generate_password_hash
-        if not User.query.filter_by(email='admin@terra-roxa.com').first():
-            admin = User(
-                email='admin@terra-roxa.com',
-                nome='Administrador',
-                senha_hash=generate_password_hash('admin123'),
-                is_admin=True,
-                role='admin'
-            )
-            db.session.add(admin)
-        
-        db.session.commit()
-        print('✅ Banco de dados inicializado!')
-    
-    app.run(host='0.0.0.0', port=8080, debug=True)
+    port = int(os.environ.get('PORT', 8080))
+    debug = os.environ.get('FLASK_ENV') != 'production'
+    app.run(host='0.0.0.0', port=port, debug=debug)

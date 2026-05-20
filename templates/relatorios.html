@@ -6,10 +6,28 @@
 {% block content %}
 <div class="card mb-4">
     <div class="card-header bg-transparent">
+        <ul class="nav nav-tabs card-header-tabs">
+            <li class="nav-item">
+                <a class="nav-link {% if tipo != 'vendas-avulsas' %}active{% endif %}" href="/relatorios?tipo=producao&data_ini={{ data_ini }}&data_fim={{ data_fim }}">
+                    🥛 Produção
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if tipo == 'vendas-avulsas' %}active{% endif %}" href="/relatorios?tipo=vendas-avulsas&data_ini={{ data_ini }}&data_fim={{ data_fim }}">
+                    📦 Vendas Avulsas
+                </a>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header bg-transparent">
         <h5 class="mb-0">🔍 Filtros</h5>
     </div>
     <div class="card-body">
         <form method="GET" class="row g-3">
+            <input type="hidden" name="tipo" value="{{ tipo }}">
             <div class="col-md-4">
                 <label class="form-label">Data Inicial</label>
                 <input type="date" name="data_ini" class="form-control" value="{{ data_ini }}">
@@ -20,12 +38,94 @@
             </div>
             <div class="col-md-4 d-flex align-items-end gap-2">
                 <button type="submit" class="btn btn-primary">Filtrar</button>
-                <a href="/relatorios/exportar?data_ini={{ data_ini }}&data_fim={{ data_fim }}" class="btn btn-success">📥 Exportar Excel</a>
             </div>
         </form>
     </div>
 </div>
 
+{% if tipo == 'vendas-avulsas' %}
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card card-metric" style="background: linear-gradient(135deg, #8E44AD 0%, #9B59B6 100%);">
+            <div class="card-body">
+                <h6 class="opacity-75">📦 Total Vendas</h6>
+                <h2 class="h4">{{ vendas|length }}</h2>
+                <small>vendas</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card card-metric" style="background: linear-gradient(135deg, #2ECC71 0%, #27AE60 100%);">
+            <div class="card-body">
+                <h6 class="opacity-75">🥛 Total Litros</h6>
+                <h2 class="h4">{{ "%.1f"|format(total_litros_vendas) }}</h2>
+                <small>litros</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card card-metric" style="background: linear-gradient(135deg, #3498DB 0%, #2980B9 100%);">
+            <div class="card-body">
+                <h6 class="opacity-75">💰 Receita Total</h6>
+                <h2 class="h4">R$ {{ "%.2f"|format(total_valor_vendas) }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-transparent">
+                <h5 class="mb-0">📊 Vendas por Dia</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="chartVendas"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mt-2">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-transparent">
+                <h5 class="mb-0">📄 Detalhamento</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Cliente</th>
+                                <th>Litros</th>
+                                <th>Valor/Litro</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for venda in vendas %}
+                            <tr>
+                                <td>{{ venda.data.strftime('%d/%m/%Y') }}</td>
+                                <td>{{ venda.cliente.nome }}</td>
+                                <td>{{ "%.1f"|format(venda.litros) }} L</td>
+                                <td>R$ {{ "%.2f"|format(venda.valor_litro) }}</td>
+                                <td><strong>R$ {{ "%.2f"|format(venda.total) }}</strong></td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">Nenhuma venda no período</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
 <div class="row g-3 mb-4">
     <div class="col-6 col-md-3">
         <div class="card card-metric">
@@ -97,10 +197,27 @@
         </div>
     </div>
 </div>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
 <script>
+{% if tipo == 'vendas-avulsas' %}
+new Chart(document.getElementById('chartVendas').getContext('2d'), {
+    type: 'bar',
+    data: {
+        labels: {{ dias_grafico|tojson }},
+        datasets: [{
+            label: 'Vendas (R$)',
+            data: {{ valores_venda|tojson }},
+            backgroundColor: '#9B59B6',
+            borderRadius: 6,
+            borderSkipped: false
+        }]
+    },
+    options: { responsive: true, scales: { y: { beginAtZero: true } } }
+});
+{% else %}
 new Chart(document.getElementById('chartProducao').getContext('2d'), {
     type: 'bar',
     data: {
@@ -126,9 +243,10 @@ new Chart(document.getElementById('chartCusto').getContext('2d'), {
     options: { responsive: true }
 });
 
+const precoLitro = {{ preco_medio }};
 const lucroData = [];
 {% for i in range(valores_prod|length) %}
-lucroData.push({{ valores_prod[i] }} * 2.5 - {{ custos_dia[i] }});
+lucroData.push({{ valores_prod[i] }} * precoLitro - {{ custos_dia[i] }});
 {% endfor %}
 
 new Chart(document.getElementById('chartLucro').getContext('2d'), {
@@ -146,5 +264,6 @@ new Chart(document.getElementById('chartLucro').getContext('2d'), {
     },
     options: { responsive: true }
 });
+{% endif %}
 </script>
 {% endblock %}

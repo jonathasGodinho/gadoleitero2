@@ -35,24 +35,6 @@
             --radius-xl: 20px;
         }
         
-        * {
-            margin:0;
-            padding:0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Inter', 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-light);
-            background-image: 
-                radial-gradient(circle at 20% 50%, rgba(46, 204, 113, 0.03) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(241, 196, 15, 0.03) 0%, transparent 50%);
-            min-height: 100vh;
-            color: var(--text-primary);
-            transition: background-color 0.3s, color 0.3s;
-            line-height: 1.6;
-        }
-        
         /* Backgrounds Unsplash por página com overlay */
         body.page-login {
             background: linear-gradient(rgba(39, 174, 96, 0.85), rgba(30, 132, 73, 0.85)), 
@@ -104,9 +86,9 @@
             background-attachment: fixed !important;
         }
         
-        body.page-pastagens {
-            background: linear-gradient(rgba(247, 249, 247, 0.90), rgba(247, 249, 247, 0.90)), 
-                        url('https://images.unsplash.com/photo-1500382017468-90445024852b?w=1920&q=80') !important;
+        body.page-vendas {
+            background: linear-gradient(rgba(247, 249, 247, 0.92), rgba(247, 249, 247, 0.92)), 
+                        url('https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=1920&q=80') !important;
             background-size: cover !important;
             background-attachment: fixed !important;
         }
@@ -116,30 +98,12 @@
         body.dark-mode.page-producao,
         body.dark-mode.page-racao,
         body.dark-mode.page-financeiro,
-        body.dark-mode.page-relatorios,
-        body.dark-mode.page-pastagens {
+body.dark-mode.page-relatorios,
+        body.dark-mode.page-vendas {
             background: linear-gradient(rgba(26, 26, 46, 0.92), rgba(26, 26, 46, 0.92)), 
-                        url('https://images.unsplash.com/photo-1500382017468-90445024852b?w=1920&q=80') !important;
+                        url('https://images.unsplash.com/photo-1551288049-bebda4e90a1?w=1920&q=80') !important;
             background-size: cover !important;
             background-attachment: fixed !important;
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Inter', 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-light);
-            background-image: 
-                radial-gradient(circle at 20% 50%, rgba(46, 204, 113, 0.03) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(241, 196, 15, 0.03) 0%, transparent 50%);
-            min-height: 100vh;
-            color: var(--text-primary);
-            transition: background-color 0.3s, color 0.3s;
-            line-height: 1.6;
         }
         
         body.dark-mode {
@@ -576,23 +540,7 @@
     </style>
     {% block extra_css %}{% endblock %}
 </head>
-<body class="{% if request.path == '/' %}page-dashboard{% elif request.path == '/login' %}page-login{% elif request.path == '/register' %}page-login{% elif '/animais' in request.path %}page-animais{% elif '/producao' in request.path %}page-producao{% elif '/racao' in request.path %}page-racao{% elif '/financeiro' in request.path %}page-financeiro{% elif '/relatorios' in request.path %}page-relatorios{% elif '/pastagens' in request.path %}page-pastagens{% else %}page-dashboard{% endif %} {% if request.cookies.get('darkMode') == 'true' %}dark-mode{% endif %}">
-    <div class="cotacao-bar">
-        <div class="container">
-            <div class="cotacao-item">
-                <span class="cotacao-label">🥛 Cotação:</span>
-                <span id="preco-leite">R$ {{ "%.2f"|format(preco_vigente_global) }}/L</span>
-            </div>
-            <div class="cotacao-item">
-                <span class="cotacao-label">📅:</span>
-                <span id="data-cotacao">{{ data_cotacao_global }}</span>
-            </div>
-            <div class="cotacao-item">
-                <span class="cotacao-label">📈:</span>
-                <span id="tendencia" style="color: #52B788;">Alta ▲</span>
-            </div>
-        </div>
-    </div>
+<body class="{% if request.path == '/' %}page-dashboard{% elif request.path == '/login' %}page-login{% elif request.path == '/register' %}page-login{% elif '/animais' in request.path %}page-animais{% elif '/producao' in request.path %}page-producao{% elif '/racao' in request.path %}page-racao{% elif '/financeiro' in request.path %}page-financeiro{% elif '/relatorios' in request.path %}page-relatorios{% elif '/vendas-avulsas' in request.path %}page-vendas{% else %}page-dashboard{% endif %} {% if request.cookies.get('darkMode') == 'true' %}dark-mode{% endif %}">
     
     <div class="mobile-header d-md-none">
         <div class="d-flex justify-content-between align-items-center">
@@ -638,17 +586,13 @@
                 <span class="nav-icon">🐂</span>
                 <span class="sidebar-text">Animais</span>
             </a>
-            <a class="nav-link {% if request.path == '/pastagens' %}active{% endif %}" href="/pastagens" data-bs-toggle="tooltip" data-bs-placement="right" title="Pastagens">
-                <span class="nav-icon">🌱</span>
-                <span class="sidebar-text">Pastagens</span>
+            <a class="nav-link {% if request.path == '/vendas-avulsas' %}active{% endif %}" href="/vendas-avulsas" data-bs-toggle="tooltip" data-bs-placement="right" title="Vendas Avulsas">
+                <span class="nav-icon">📦</span>
+                <span class="sidebar-text">Vendas Avulsas</span>
             </a>
             <a class="nav-link {% if request.path == '/financeiro' %}active{% endif %}" href="/financeiro" data-bs-toggle="tooltip" data-bs-placement="right" title="Financeiro">
                 <span class="nav-icon">💰</span>
                 <span class="sidebar-text">Financeiro</span>
-            </a>
-            <a class="nav-link {% if request.path == '/orcamento' %}active{% endif %}" href="/orcamento" data-bs-toggle="tooltip" data-bs-placement="right" title="Orçamento">
-                <span class="nav-icon">📊</span>
-                <span class="sidebar-text">Orçamento</span>
             </a>
             <a class="nav-link {% if request.path == '/relatorios' %}active{% endif %}" href="/relatorios" data-bs-toggle="tooltip" data-bs-placement="right" title="Relatórios">
                 <span class="nav-icon">📈</span>
@@ -853,28 +797,7 @@
             });
         });
         
-        async function atualizarCotacao() {
-            try {
-                const response = await fetch('/api/cotacao-leite');
-                const dados = await response.json();
-                
-                document.getElementById('preco-leite').textContent = 'R$ ' + dados.preco.toFixed(2) + '/L';
-                document.getElementById('data-cotacao').textContent = dados.data;
-                
-                const tendenciaEl = document.getElementById('tendencia');
-                if (dados.tendencia === 'alta') {
-                    tendenciaEl.textContent = 'Alta ▲';
-                    tendenciaEl.style.color = '#52B788';
-                } else {
-                    tendenciaEl.textContent = 'Baixa ▼';
-                    tendenciaEl.style.color = '#e74c3c';
-                }
-            } catch (e) {
-                console.log('Erro ao buscar cotação:', e);
-            }
-        }
-        atualizarCotacao();
-        setInterval(atualizarCotacao, 300000);
+
     </script>
     {% block extra_js %}{% endblock %}
 </body>
