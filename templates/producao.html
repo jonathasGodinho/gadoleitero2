@@ -11,10 +11,11 @@
                 <h5 class="mb-0">➕ Nova Produção</h5>
             </div>
             <div class="card-body">
-                <form method="POST">
+                    <form method="POST" id="form-producao">
+                    <input type="hidden" name="edit_id" id="edit-id" value="">
                     <div class="mb-3">
                         <label class="form-label">Data</label>
-                        <input type="date" name="data" class="form-control" value="{{ today }}" required>
+                        <input type="date" name="data" id="input-data" class="form-control" value="{{ today }}" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Quantidade (litros)</label>
@@ -28,7 +29,8 @@
                         <label class="form-label text-muted">Total a Receber</label>
                         <h4 class="mb-0" id="total-receber-display">R$ 0,00</h4>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100">Registrar</button>
+                    <button type="submit" class="btn btn-primary w-100" id="btn-submit">Registrar</button>
+                    <button type="button" class="btn btn-secondary w-100 mt-2 d-none" id="btn-cancelar" onclick="cancelarEdicao()">Cancelar Edição</button>
                 </form>
             </div>
         </div>
@@ -63,6 +65,7 @@
                                 <td>R$ {{ "%.2f"|format(p.preco_venda) }}</td>
                                 <td>R$ {{ "%.2f"|format(p.total_receber) }}</td>
                                 <td>
+                                    <button onclick="editar('{{ p.id }}', '{{ p.data.strftime('%Y-%m-%d') }}', '{{ p.litros }}', '{{ p.preco_venda }}')" class="btn btn-sm btn-outline-primary">✎</button>
                                     <a href="/producao/excluir/{{ p.id }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Excluir?')">✕</a>
                                 </td>
                             </tr>
@@ -100,5 +103,27 @@
     }
     document.getElementById('input-litros').addEventListener('input', calcularTotal);
     document.getElementById('input-preco').addEventListener('input', calcularTotal);
+
+    function editar(id, data, litros, preco) {
+        document.getElementById('edit-id').value = id;
+        document.getElementById('input-data').value = data;
+        document.getElementById('input-litros').value = litros;
+        document.getElementById('input-preco').value = preco;
+        document.getElementById('btn-submit').textContent = 'Atualizar';
+        document.getElementById('btn-cancelar').classList.remove('d-none');
+        document.getElementById('form-producao').action = '/producao/editar/' + id;
+        calcularTotal();
+    }
+
+    function cancelarEdicao() {
+        document.getElementById('edit-id').value = '';
+        document.getElementById('input-data').value = '{{ today }}';
+        document.getElementById('input-litros').value = '';
+        document.getElementById('input-preco').value = '{{ preco_padrao }}';
+        document.getElementById('btn-submit').textContent = 'Registrar';
+        document.getElementById('btn-cancelar').classList.add('d-none');
+        document.getElementById('form-producao').action = '';
+        document.getElementById('total-receber-display').textContent = 'R$ 0,00';
+    }
 </script>
 {% endblock %}
