@@ -61,6 +61,7 @@
                 {% endif %}
             {% endwith %}
             <form method="POST">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                 <div class="mb-3">
                     <label class="form-label" style="color: #2D3436;">Email</label>
                     <input type="email" name="email" class="form-control" required autofocus>

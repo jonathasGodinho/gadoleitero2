@@ -12,26 +12,27 @@
             </div>
             <div class="card-body">
                 <form method="POST">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                     <div class="mb-3">
                         <label class="form-label">Nome</label>
                         <input type="text" name="nome" class="form-control" required>
                     </div>
-                <div class="mb-3">
-                    <label class="form-label">Raça</label>
-                    <input type="text" name="raca" class="form-control" placeholder="Ex: Holandesa, Nelore, etc.">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Filhote</label>
-                    <input type="text" name="lote" class="form-control" placeholder="Ex: Filhote A">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Sexo</label>
-                    <select name="sexo" class="form-control" required>
-                        <option value="">Selecione...</option>
-                        <option value="macho">♂️ Macho</option>
-                        <option value="femea">♀️ Fêmea</option>
-                    </select>
-                </div>
+                    <div class="mb-3">
+                        <label class="form-label">Raça</label>
+                        <input type="text" name="raca" class="form-control" placeholder="Ex: Holandesa, Nelore, etc.">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Filhote</label>
+                        <input type="text" name="lote" class="form-control" placeholder="Ex: Filhote A">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Sexo</label>
+                        <select name="sexo" class="form-control" required>
+                            <option value="">Selecione...</option>
+                            <option value="macho">♂️ Macho</option>
+                            <option value="femea">♀️ Fêmea</option>
+                        </select>
+                    </div>
                     <div class="form-check mb-3">
                         <input class="form-check-input" type="checkbox" name="ativo" id="ativo" checked>
                         <label class="form-check-label" for="ativo">Animal ativo</label>
@@ -96,6 +97,7 @@
                                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                         </div>
                                         <form method="POST" action="/animais/editar/{{ animal.id }}">
+                                            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                                             <div class="modal-body">
                                                 <div class="mb-2">
                                                     <label class="form-label">Nome</label>
