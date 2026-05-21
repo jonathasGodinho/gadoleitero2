@@ -13,8 +13,10 @@ import calendar
 import os
 import re
 import secrets
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
 app.permanent_session_lifetime = timedelta(hours=8)
 
@@ -33,7 +35,6 @@ if os.environ.get('RENDER') or os.environ.get('FLASK_ENV') == 'production':
     app.config['SESSION_COOKIE_SECURE'] = True
     app.config['SESSION_COOKIE_HTTPONLY'] = True
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-    app.config['SESSION_COOKIE_NAME'] = '__Host-session'
     app.config['JSON_AS_ASCII'] = False
 
 db = SQLAlchemy(app)

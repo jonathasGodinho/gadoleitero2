@@ -9,10 +9,14 @@ services:
         value: 3.11.9
       - key: FLASK_APP
         value: run.py
+      - key: DATABASE_URL
+        fromDatabase:
+          name: terra-roxa-db
+          property: connectionString
     healthCheckPath: /login
-    
-  - type: psql
-    name: terra-roxa-db
+
+databases:
+  - name: terra-roxa-db
     databaseName: gadoleiteiro
     user: admin
     plan: free
