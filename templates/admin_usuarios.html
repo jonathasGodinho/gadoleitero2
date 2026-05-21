@@ -12,7 +12,6 @@
             </div>
             <div class="card-body">
                 <form method="POST" action="/admin/usuario/criar">
-                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                     <div class="mb-3">
                         <label class="form-label">Nome</label>
                         <input type="text" name="nome" class="form-control" required>
@@ -76,7 +75,6 @@
                                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                         </div>
                                         <form method="POST" action="/admin/usuario/editar/{{ u.id }}">
-                                            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                                             <div class="modal-body">
                                                 <div class="mb-2">
                                                     <label class="form-label">Nome</label>
@@ -111,7 +109,6 @@
                                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                         </div>
                                         <form method="POST" action="/admin/usuario/trocar-senha/{{ u.id }}">
-                                            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                                             <div class="modal-body">
                                                 <div class="mb-2">
                                                     <label class="form-label">Nova Senha</label>

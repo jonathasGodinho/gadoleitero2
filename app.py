@@ -7,18 +7,13 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from flask_migrate import Migrate
 from datetime import datetime, date, timedelta
 from io import BytesIO
-from markupsafe import escape
-from functools import wraps
 import calendar
 import os
-import re
-import secrets
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
-app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
-app.permanent_session_lifetime = timedelta(hours=8)
+app.secret_key = os.environ.get('SECRET_KEY', 'terra-roxa-sistema-2024')
 
 # Configuração de banco: PostgreSQL (produção) ou SQLite (desenvolvimento)
 database_url = os.environ.get('DATABASE_URL')
@@ -41,11 +36,6 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
-login_manager.login_message = 'Faça login para acessar o sistema.'
-login_manager.login_message_category = 'info'
-login_manager.refresh_view = 'login'
-login_manager.needs_refresh_message = 'Sessão expirada. Faça login novamente.'
-login_manager.needs_refresh_message_category = 'warning'
 
 # ========== MODELOS ==========
 
@@ -167,76 +157,6 @@ class VendaAvulsa(db.Model):
     total = db.Column(db.Numeric(10, 2), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-class LoginAttempt(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(150), nullable=False)
-    ip_address = db.Column(db.String(50))
-    success = db.Column(db.Boolean, default=False)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-
-# ========== SEGURANÇA ==========
-
-MAX_LOGIN_ATTEMPTS = 5
-LOGIN_LOCKOUT_MINUTES = 15
-
-def sanitize_input(value):
-    if value is None:
-        return None
-    return str(value).strip()[:500]
-
-def validar_senha(senha):
-    if len(senha) < 6:
-        return 'A senha deve ter no mínimo 6 caracteres.'
-    if len(senha) > 128:
-        return 'A senha deve ter no máximo 128 caracteres.'
-    return None
-
-def gerar_csrf_token():
-    if '_csrf_token' not in session:
-        session['_csrf_token'] = secrets.token_hex(32)
-    return session['_csrf_token']
-
-def validar_csrf_token(token):
-    stored = session.pop('_csrf_token', None)
-    if not stored or not token:
-        return False
-    return secrets.compare_digest(stored, token)
-
-def csrf_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if request.method == 'POST':
-            token = request.form.get('_csrf_token') or (request.get_json(silent=True) or {}).get('_csrf_token')
-            if not validar_csrf_token(token):
-                log_auditoria('CSRF bloqueado', f'IP: {request.remote_addr}, Rota: {request.path}')
-                return jsonify(success=False, error='Token de segurança inválido. Recarregue a página e tente novamente.'), 403
-        return f(*args, **kwargs)
-    return decorated_function
-
-def add_security_headers(response):
-    response.headers['X-Content-Type-Options'] = 'nosniff'
-    response.headers['X-Frame-Options'] = 'DENY'
-    response.headers['X-XSS-Protection'] = '1; mode=block'
-    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
-    response.headers['Permissions-Policy'] = 'camera=(), microphone=(), geolocation=()'
-    if os.environ.get('RENDER'):
-        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-        response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; img-src 'self' data: https://images.unsplash.com; font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; connect-src 'self' http://api.openweathermap.org"
-    return response
-
-def verificar_lockout(email):
-    periodo = datetime.utcnow() - timedelta(minutes=LOGIN_LOCKOUT_MINUTES)
-    tentativas_recentes = LoginAttempt.query.filter(
-        LoginAttempt.email == email,
-        LoginAttempt.success == False,
-        LoginAttempt.timestamp >= periodo
-    ).count()
-    if tentativas_recentes >= MAX_LOGIN_ATTEMPTS:
-        return True, f'Conta temporariamente bloqueada por muitas tentativas. Tente novamente em {LOGIN_LOCKOUT_MINUTES} minutos.'
-    return False, None
-
-app.after_request(add_security_headers)
-
 # ========== FUNÇÕES AUXILIARES ==========
 
 @login_manager.user_loader
@@ -248,8 +168,7 @@ def inject_cotacao():
     hoje = date.today()
     preco = get_preco_vigente(hoje)
     data_fmt = hoje.strftime('%d/%m/%Y')
-    csrf = gerar_csrf_token()
-    return dict(preco_vigente_global=preco, data_cotacao_global=data_fmt, csrf_token=csrf)
+    return dict(preco_vigente_global=preco, data_cotacao_global=data_fmt)
 
 def log_auditoria(acao, detalhes='', user_id=None):
     if user_id is None and current_user.is_authenticated:
@@ -326,18 +245,15 @@ def api_clima():
 
 @app.route('/api/atualizar-preco', methods=['POST'])
 @login_required
-@csrf_required
 def atualizar_preco():
     try:
         data = request.get_json()
-        if not data:
-            return {'success': False, 'error': 'Dados inválidos'}, 400
-        
         novo_preco = float(data.get('preco', 0))
         
         if novo_preco <= 0:
             return {'success': False, 'error': 'Preço inválido'}
         
+        # Atualizar ou criar novo preço vigente
         hoje = date.today()
         preco_existente = PrecoLeite.query.filter(PrecoLeite.data_vigencia <= hoje).order_by(PrecoLeite.data_vigencia.desc()).first()
         
@@ -351,8 +267,8 @@ def atualizar_preco():
         log_auditoria('Atualizar Preço Leite', f'Novo preço: R$ {novo_preco}')
         
         return {'success': True}
-    except Exception:
-        return {'success': False, 'error': 'Erro interno'}, 500
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
 
 @app.route('/api/cotacao-leite')
 def api_cotacao_leite():
@@ -728,61 +644,35 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
     if request.method == 'POST':
-        email = sanitize_input(request.form.get('email'))
-        password = request.form.get('password', '')
-        ip = request.remote_addr or 'desconhecido'
-
-        bloqueado, msg_bloqueio = verificar_lockout(email)
-        if bloqueado:
-            log_auditoria('Login bloqueado', f'Email: {email}, IP: {ip}')
-            flash(msg_bloqueio, 'danger')
-            return redirect(url_for('login'))
-
+        email = request.form.get('email')
+        password = request.form.get('password')
+        
         user = User.query.filter_by(email=email).first()
         if user and user.ativo:
             from werkzeug.security import check_password_hash
             if check_password_hash(user.senha_hash, password):
-                session.permanent = True
-                session.regenerate()
-                login_user(user, remember=False)
-                tentativa = LoginAttempt(email=email, ip_address=ip, success=True)
-                db.session.add(tentativa)
-                db.session.commit()
+                login_user(user)
                 log_auditoria('Login realizado', f'Usuário {email} fez login')
                 return redirect(url_for('index'))
-
-        tentativa = LoginAttempt(email=email, ip_address=ip, success=False)
-        db.session.add(tentativa)
-        db.session.commit()
-        log_auditoria('Login falhou', f'Email: {email}, IP: {ip}')
+        
         flash('Email ou senha inválidos', 'danger')
         return redirect(url_for('login'))
-
-    csrf_token = gerar_csrf_token()
-    return render_template('login.html', csrf_token=csrf_token)
+    
+    return render_template('login.html')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
     if request.method == 'POST':
-        email = sanitize_input(request.form.get('email'))
-        nome = sanitize_input(request.form.get('nome'))
-        senha = request.form.get('senha', '')
-
-        if not email or not nome:
-            flash('Preencha todos os campos.', 'danger')
-            return redirect(url_for('register'))
-
+        email = request.form.get('email')
+        nome = request.form.get('nome')
+        senha = request.form.get('senha')
+        
         if User.query.filter_by(email=email).first():
             flash('Email já cadastrado', 'danger')
             return redirect(url_for('register'))
-
-        erro_senha = validar_senha(senha)
-        if erro_senha:
-            flash(erro_senha, 'danger')
-            return redirect(url_for('register'))
-
+        
         from werkzeug.security import generate_password_hash
         user = User(
             email=email,
@@ -794,17 +684,16 @@ def register():
         db.session.add(user)
         db.session.commit()
         log_auditoria('Usuário criado', f'Novo usuário: {email}')
+        
         flash('Usuário criado com sucesso! Faça login.', 'success')
         return redirect(url_for('login'))
-
-    csrf_token = gerar_csrf_token()
-    return render_template('register.html', csrf_token=csrf_token)
+    
+    return render_template('register.html')
 
 @app.route('/logout')
 @login_required
 def logout():
     log_auditoria('Logout realizado', f'Usuário {current_user.email} saiu')
-    session.clear()
     logout_user()
     return redirect(url_for('login'))
 
@@ -812,7 +701,6 @@ def logout():
 
 @app.route('/producao', methods=['GET', 'POST'])
 @login_required
-@csrf_required
 def producao():
     if request.method == 'POST':
         litros = float(request.form.get('litros'))
@@ -870,7 +758,6 @@ def excluir_producao(id):
 
 @app.route('/racao', methods=['GET', 'POST'])
 @login_required
-@csrf_required
 def racao():
     if request.method == 'POST':
         nome = request.form.get('nome')
@@ -909,7 +796,6 @@ def excluir_consumo_racao(id):
 
 @app.route('/racao/consumo', methods=['GET', 'POST'])
 @login_required
-@csrf_required
 def consumo_racao():
     if request.method == 'POST':
         animal_id = request.form.get('animal_id')
@@ -956,7 +842,6 @@ def consumo_racao():
 
 @app.route('/animais', methods=['GET', 'POST'])
 @login_required
-@csrf_required
 def animais():
     if request.method == 'POST':
         nome = request.form.get('nome')
@@ -1014,7 +899,6 @@ def excluir_animal(id):
 
 @app.route('/animais/saude/<int:id>', methods=['GET', 'POST'])
 @login_required
-@csrf_required
 def saude_animal(id):
     animal = Animal.query.get_or_404(id)
     
@@ -1152,7 +1036,6 @@ def excluir_despesa(id):
 
 @app.route('/financeiro', methods=['GET', 'POST'])
 @login_required
-@csrf_required
 def financeiro():
     if request.method == 'POST':
         descricao = request.form.get('descricao')
@@ -1192,7 +1075,6 @@ def financeiro():
 
 @app.route('/ajustes/reset', methods=['POST'])
 @login_required
-@csrf_required
 def reset_dados():
     if current_user.role not in ['admin', 'gerente']:
         flash('Acesso restrito', 'danger')
@@ -1224,7 +1106,6 @@ def reset_dados():
 
 @app.route('/orcamento', methods=['GET', 'POST'])
 @login_required
-@csrf_required
 def orcamento():
     if request.method == 'POST':
         ano = int(request.form.get('ano'))
@@ -1262,7 +1143,6 @@ def ajustes():
 
 @app.route('/ajustes/preco', methods=['POST'])
 @login_required
-@csrf_required
 def ajustar_preco():
     if current_user.role not in ['admin', 'gerente']:
         flash('Acesso restrito', 'danger')
@@ -1292,22 +1172,15 @@ def admin_usuarios():
 
 @app.route('/admin/usuario/criar', methods=['POST'])
 @login_required
-@csrf_required
 def admin_usuario_criar():
     if current_user.role != 'admin':
         flash('Acesso restrito', 'danger')
         return redirect(url_for('index'))
     from werkzeug.security import generate_password_hash
-    nome = sanitize_input(request.form.get('nome'))
-    email = sanitize_input(request.form.get('email'))
-    senha = request.form.get('senha', '')
+    nome = request.form.get('nome')
+    email = request.form.get('email')
+    senha = request.form.get('senha')
     is_admin = request.form.get('is_admin') == 'on'
-
-    erro_senha = validar_senha(senha)
-    if erro_senha:
-        flash(erro_senha, 'danger')
-        return redirect(url_for('admin_usuarios'))
-
     if User.query.filter_by(email=email).first():
         flash('Email já cadastrado', 'danger')
         return redirect(url_for('admin_usuarios'))
@@ -1320,21 +1193,16 @@ def admin_usuario_criar():
 
 @app.route('/admin/usuario/editar/<int:id>', methods=['POST'])
 @login_required
-@csrf_required
 def admin_usuario_editar(id):
     if current_user.role != 'admin':
         flash('Acesso restrito', 'danger')
         return redirect(url_for('index'))
     from werkzeug.security import generate_password_hash
     user = User.query.get_or_404(id)
-    user.nome = sanitize_input(request.form.get('nome'))
-    user.email = sanitize_input(request.form.get('email'))
-    senha = request.form.get('senha', '')
+    user.nome = request.form.get('nome')
+    user.email = request.form.get('email')
+    senha = request.form.get('senha')
     if senha:
-        erro_senha = validar_senha(senha)
-        if erro_senha:
-            flash(erro_senha, 'danger')
-            return redirect(url_for('admin_usuarios'))
         user.senha_hash = generate_password_hash(senha)
     user.is_admin = request.form.get('is_admin') == 'on'
     user.role = 'admin' if user.is_admin else 'operador'
@@ -1345,18 +1213,13 @@ def admin_usuario_editar(id):
 
 @app.route('/admin/usuario/trocar-senha/<int:id>', methods=['POST'])
 @login_required
-@csrf_required
 def admin_usuario_trocar_senha(id):
     if current_user.role != 'admin':
         flash('Acesso restrito', 'danger')
         return redirect(url_for('index'))
     from werkzeug.security import generate_password_hash
     user = User.query.get_or_404(id)
-    nova_senha = request.form.get('nova_senha', '')
-    erro_senha = validar_senha(nova_senha)
-    if erro_senha:
-        flash(erro_senha, 'danger')
-        return redirect(url_for('admin_usuarios'))
+    nova_senha = request.form.get('nova_senha')
     user.senha_hash = generate_password_hash(nova_senha)
     db.session.commit()
     log_auditoria('Senha alterada', f'{user.email}')
@@ -1430,7 +1293,6 @@ def backup():
 
 @app.route('/vendas-avulsas', methods=['GET', 'POST'])
 @login_required
-@csrf_required
 def vendas_avulsas():
     from datetime import date
     if request.method == 'POST':

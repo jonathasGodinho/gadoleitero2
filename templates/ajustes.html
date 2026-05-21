@@ -12,7 +12,6 @@
             </div>
             <div class="card-body">
                 <form method="POST" action="/ajustes/preco" class="mb-4">
-                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                     <div class="mb-3">
                         <label class="form-label">Novo Preço por Litro (R$)</label>
                         <input type="number" step="0.0001" name="preco_litro" class="form-control" required>
@@ -63,7 +62,6 @@
                 <p class="text-muted">Cuidado: esta ação não pode ser desfeita.</p>
                 
                 <form method="POST" action="/ajustes/reset" class="mb-3">
-                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                     <input type="hidden" name="tipo" value="producao">
                     <button type="submit" class="btn btn-outline-danger w-100 mb-2" onclick="return confirm('Tem certeza que deseja limpar todos os dados de produção?')">
                         🗑️ Limpar Dados de Produção
@@ -71,7 +69,6 @@
                 </form>
                 
                 <form method="POST" action="/ajustes/reset" class="mb-3">
-                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                     <input type="hidden" name="tipo" value="racao">
                     <button type="submit" class="btn btn-outline-danger w-100 mb-2" onclick="return confirm('Tem certeza que deseja limpar todos os dados de ração?')">
                         🗑️ Limpar Dados de Ração
@@ -79,7 +76,6 @@
                 </form>
                 
                 <form method="POST" action="/ajustes/reset">
-                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                     <input type="hidden" name="tipo" value="todos">
                     <button type="submit" class="btn btn-danger w-100" onclick="return confirm('ATENÇÃO: Isso excluirá TODOS os dados (animais, rações, produção). Tem certeza?')">
                         ⚠️ Limpar Todos os Dados
