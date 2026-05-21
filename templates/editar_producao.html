@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Produção - Terra Roxa System{% endblock %}
+{% block page_title %}✎ Editar Produção{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-transparent">
+                <h5 class="mb-0">Editar Registro de Produção</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="/producao/editar/{{ producao.id }}">
+                    <div class="mb-3">
+                        <label class="form-label">Data</label>
+                        <input type="date" name="data" class="form-control" value="{{ producao.data.strftime('%Y-%m-%d') }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Quantidade (litros)</label>
+                        <input type="number" step="0.01" name="litros" class="form-control" value="{{ producao.litros }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Preço (R$/litro)</label>
+                        <input type="number" step="0.01" name="preco_venda" class="form-control" value="{{ producao.preco_venda }}" required>
+                    </div>
+                    <div class="mb-3 p-3 bg-light rounded">
+                        <label class="form-label text-muted">Total a Receber</label>
+                        <h4 class="mb-0">R$ {{ "%.2f"|format(producao.total_receber) }}</h4>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">Salvar</button>
+                        <a href="/producao" class="btn btn-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

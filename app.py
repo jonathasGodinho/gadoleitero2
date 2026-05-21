@@ -741,18 +741,20 @@ def producao():
                            total_litros_geral=total_litros_geral,
                            total_receber_geral=total_receber_geral)
 
-@app.route('/producao/editar/<int:id>', methods=['POST'])
+@app.route('/producao/editar/<int:id>', methods=['GET', 'POST'])
 @login_required
 def editar_producao(id):
     producao = ProducaoLeite.query.get_or_404(id)
-    producao.data = datetime.strptime(request.form.get('data'), '%Y-%m-%d').date()
-    producao.litros = float(request.form.get('litros'))
-    producao.preco_venda = float(request.form.get('preco_venda'))
-    producao.total_receber = round(producao.litros * producao.preco_venda, 2)
-    db.session.commit()
-    log_auditoria('Produção editada', f'{producao.litros}L a R$ {producao.preco_venda}/L')
-    flash('Produção atualizada!', 'success')
-    return redirect(url_for('producao'))
+    if request.method == 'POST':
+        producao.data = datetime.strptime(request.form.get('data'), '%Y-%m-%d').date()
+        producao.litros = float(request.form.get('litros'))
+        producao.preco_venda = float(request.form.get('preco_venda'))
+        producao.total_receber = round(producao.litros * producao.preco_venda, 2)
+        db.session.commit()
+        log_auditoria('Produção editada', f'{producao.litros}L a R$ {producao.preco_venda}/L')
+        flash('Produção atualizada!', 'success')
+        return redirect(url_for('producao'))
+    return render_template('editar_producao.html', producao=producao)
 
 @app.route('/producao/excluir/<int:id>')
 @login_required
