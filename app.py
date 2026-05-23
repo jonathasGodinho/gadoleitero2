@@ -224,6 +224,10 @@ def calcular_custo_producao(data_ini, data_fim):
 
 # ========== ROTAS ==========
 
+@app.route('/health')
+def health():
+    return {'status': 'ok'}, 200
+
 @app.route('/api/clima')
 def api_clima():
     import requests

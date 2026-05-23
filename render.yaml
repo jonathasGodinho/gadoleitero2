@@ -13,7 +13,7 @@ services:
         fromDatabase:
           name: terra-roxa-db
           property: connectionString
-    healthCheckPath: /login
+    healthCheckPath: /health
 
 databases:
   - name: terra-roxa-db
