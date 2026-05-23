@@ -709,7 +709,7 @@ def producao():
     if request.method == 'POST':
         litros = float(request.form.get('litros'))
         data = datetime.strptime(request.form.get('data'), '%Y-%m-%d').date()
-        preco_venda = float(request.form.get('preco_venda')) if request.form.get('preco_venda') else 2.20
+        preco_venda = float(request.form.get('preco_venda')) if request.form.get('preco_venda') else 2.22
         total_receber = round(litros * preco_venda, 2)
         
         nova_producao = ProducaoLeite(
@@ -741,7 +741,7 @@ def producao():
     return render_template('producao.html', 
                            producoes=producoes, 
                            today=today,
-                           preco_padrao=2.20,
+                           preco_padrao=2.22,
                            total_litros_geral=total_litros_geral,
                            total_receber_geral=total_receber_geral)
 
