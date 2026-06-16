@@ -222,6 +222,45 @@ def calcular_custo_producao(data_ini, data_fim):
     
     return total_custos / total_leite if total_leite > 0 else 0
 
+def evolucao_custo_litro(dias=30):
+    arrays_datas, arrays_valores = [], []
+    for i in range(dias - 1, -1, -1):
+        d = date.today() - timedelta(days=i)
+        arrays_datas.append(d.strftime('%d/%m'))
+        custo = calcular_custo_producao(d, d)
+        arrays_valores.append(round(custo, 4))
+    return arrays_datas, arrays_valores
+
+def evolucao_custo_litro_periodo(data_ini, data_fim):
+    arrays_datas, arrays_valores = [], []
+    delta = (data_fim - data_ini).days
+    if delta > 365:
+        meses = sorted(set(
+            [data_ini + timedelta(days=i) for i in range(delta + 1)]
+        ), key=lambda x: x.strftime('%Y-%m'))
+        meses_unicos = {}
+        for i in range(delta + 1):
+            d = data_ini + timedelta(days=i)
+            mes_key = d.strftime('%Y-%m')
+            if mes_key not in meses_unicos:
+                meses_unicos[mes_key] = {'inicio': d}
+        for mes_key in sorted(meses_unicos):
+            m = meses_unicos[mes_key]
+            primeiro = m['inicio']
+            ultimo = (primeiro.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+            if ultimo > data_fim:
+                ultimo = data_fim
+            arrays_datas.append(primeiro.strftime('%m/%Y'))
+            custo = calcular_custo_producao(primeiro, ultimo)
+            arrays_valores.append(round(custo, 4))
+    else:
+        for i in range(delta + 1):
+            d = data_ini + timedelta(days=i)
+            arrays_datas.append(d.strftime('%d/%m'))
+            custo = calcular_custo_producao(d, d)
+            arrays_valores.append(round(custo, 4))
+    return arrays_datas, arrays_valores
+
 # ========== ROTAS ==========
 
 @app.route('/health')
@@ -378,6 +417,9 @@ def index():
     
     custo_producao_hoje = calcular_custo_producao(today, today)
     
+    custo_litro_dias, custo_litro_valores = evolucao_custo_litro(30)
+    custo_litro_media = round(sum(custo_litro_valores) / len(custo_litro_valores), 4) if custo_litro_valores else 0
+    
     # Resumo mensal de produção
     primeiro_dia_mes = date(today.year, today.month, 1)
     producoes_mes = ProducaoLeite.query.filter(ProducaoLeite.data >= primeiro_dia_mes).all()
@@ -410,7 +452,10 @@ def index():
                            data_cotacao=data_cotacao,
                            total_litros_mes=total_litros_mes,
                            receita_mensal_resumo=receita_mensal,
-                           receita_mensal=receita_mensal)
+                           receita_mensal=receita_mensal,
+                           custo_litro_dias=custo_litro_dias,
+                           custo_litro_valores=custo_litro_valores,
+                           custo_litro_media=custo_litro_media)
 
 @app.route('/relatorios/pdf')
 @login_required
@@ -1093,6 +1138,9 @@ def relatorios():
     
     preco_medio = get_preco_vigente(data_fim_date)
 
+    rel_custo_litro_dias, rel_custo_litro_valores = evolucao_custo_litro_periodo(data_ini_date, data_fim_date)
+    rel_custo_litro_media = round(sum(rel_custo_litro_valores) / len(rel_custo_litro_valores), 4) if rel_custo_litro_valores else 0
+
     return render_template('relatorios.html',
                            data_ini=data_ini, data_fim=data_fim,
                            tipo=tipo,
@@ -1103,7 +1151,10 @@ def relatorios():
                            custos_dia=custos_dia, custo_por_tipo=custo_por_tipo,
                            preco_medio=preco_medio,
                            meses_labels=meses_labels, valores_mensais=valores_mensais,
-                           custo_mensal=custo_mensal, lucro_mensal=lucro_mensal)
+                           custo_mensal=custo_mensal, lucro_mensal=lucro_mensal,
+                           rel_custo_litro_dias=rel_custo_litro_dias,
+                           rel_custo_litro_valores=rel_custo_litro_valores,
+                           rel_custo_litro_media=rel_custo_litro_media)
 
 # ========== FINANCEIRO ==========
 

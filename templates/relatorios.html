@@ -220,6 +220,20 @@
         </div>
     </div>
 </div>
+
+<div class="row g-4 mt-2">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">📈 Evolução Custo/Litro</h5>
+                <small class="text-muted">Média: <strong>R$ {{ "%.4f"|format(rel_custo_litro_media) }}</strong></small>
+            </div>
+            <div class="card-body">
+                <canvas id="chartCustoLiteroRel"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
 {% endif %}
 {% endblock %}
 
@@ -306,6 +320,68 @@ new Chart(document.getElementById('chartLucroMensal').getContext('2d'), {
         }]
     },
     options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+});
+}
+
+if ({{ rel_custo_litro_valores|length }} > 1) {
+const coresRel = { red: '#E74C3C', navy: '#2C3E50' };
+new Chart(document.getElementById('chartCustoLiteroRel').getContext('2d'), {
+    type: 'line',
+    data: {
+        labels: {{ rel_custo_litro_dias|tojson }},
+        datasets: [{
+            label: 'Custo/Litro (R$)',
+            data: {{ rel_custo_litro_valores|tojson }},
+            borderColor: coresRel.red,
+            backgroundColor: function(context) {
+                const chart = context.chart;
+                const {ctx, chartArea} = chart;
+                if (!chartArea) return 'rgba(231, 76, 60, 0.1)';
+                const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+                gradient.addColorStop(0, 'rgba(231, 76, 60, 0.0)');
+                gradient.addColorStop(1, 'rgba(231, 76, 60, 0.3)');
+                return gradient;
+            },
+            fill: true,
+            tension: 0.4,
+            borderWidth: 3,
+            pointBackgroundColor: '#E74C3C',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 6
+        }, {
+            label: 'Média',
+            data: Array({{ rel_custo_litro_valores|length }}).fill({{ rel_custo_litro_media }}),
+            borderColor: coresRel.navy,
+            borderDash: [6, 3],
+            borderWidth: 2,
+            pointRadius: 0,
+            fill: false
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                backgroundColor: 'rgba(44, 62, 80, 0.9)',
+                padding: 12,
+                cornerRadius: 8,
+                callbacks: {
+                    label: function(context) { return 'R$ ' + context.parsed.y.toFixed(4); }
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                grid: { color: 'rgba(0,0,0,0.05)' },
+                ticks: { callback: function(v) { return 'R$ ' + v.toFixed(2); } }
+            },
+            x: { grid: { display: false }, ticks: { maxTicksLimit: 15, font: { size: 10 } } }
+        }
+    }
 });
 }
 {% endif %}
