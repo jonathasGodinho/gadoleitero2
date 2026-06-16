@@ -271,21 +271,23 @@ def health():
 def api_clima():
     API_KEY = os.environ.get('OPENWEATHER_API_KEY', '')
     if not API_KEY:
-        return {'temp': 25, 'description': 'ensolarado', 'humidity': 60, 'icon': '01d'}
+        return {'temp': 25, 'description': 'ensolarado', 'humidity': 60, 'icon': '01d', 'location': 'Santo Antônio do Matupi - AM', 'feels_like': 24}
     import requests
     try:
-        CITY = 'Sao Paulo,BR'
-        url = f'http://api.openweathermap.org/data/2.5/weather?q={CITY}&appid={API_KEY}&units=metric&lang=pt_br'
+        LAT, LON = '-7.9268788', '-61.571846'
+        url = f'http://api.openweathermap.org/data/2.5/weather?lat={LAT}&lon={LON}&appid={API_KEY}&units=metric&lang=pt_br'
         resp = requests.get(url, timeout=5)
         data = resp.json()
         return {
             'temp': data['main']['temp'],
             'description': data['weather'][0]['description'],
             'humidity': data['main']['humidity'],
-            'icon': data['weather'][0]['icon']
+            'icon': data['weather'][0]['icon'],
+            'location': 'Santo Antônio do Matupi - AM',
+            'feels_like': data['main']['feels_like']
         }
     except:
-        return {'temp': 25, 'description': 'ensolarado', 'humidity': 60, 'icon': '01d'}
+        return {'temp': 25, 'description': 'ensolarado', 'humidity': 60, 'icon': '01d', 'location': 'Santo Antônio do Matupi - AM', 'feels_like': 24}
 
 @app.route('/api/atualizar-preco', methods=['POST'])
 @login_required
