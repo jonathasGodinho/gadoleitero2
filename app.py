@@ -1045,6 +1045,18 @@ def relatorios():
     for c in consumos:
         tipo_nome = c.tipo_racao.nome
         custo_por_tipo[tipo_nome] = custo_por_tipo.get(tipo_nome, 0) + float(c.custo)
+
+    producao_por_mes = {}
+    for p in producoes:
+        mes_key = p.data.strftime('%Y-%m')
+        producao_por_mes[mes_key] = producao_por_mes.get(mes_key, 0) + float(p.litros)
+    meses_grafico = sorted(producao_por_mes.keys())
+    if meses_grafico:
+        meses_labels = [datetime.strptime(m + '-01', '%Y-%m-%d').strftime('%m/%Y') for m in meses_grafico]
+        valores_mensais = [producao_por_mes[m] for m in meses_grafico]
+    else:
+        meses_labels = []
+        valores_mensais = []
     
     preco_medio = get_preco_vigente(data_fim_date)
 
@@ -1056,7 +1068,8 @@ def relatorios():
                            custo_producao=custo_producao,
                            dias_grafico=dias_grafico, valores_prod=valores_prod,
                            custos_dia=custos_dia, custo_por_tipo=custo_por_tipo,
-                           preco_medio=preco_medio)
+                           preco_medio=preco_medio,
+                           meses_labels=meses_labels, valores_mensais=valores_mensais)
 
 # ========== FINANCEIRO ==========
 

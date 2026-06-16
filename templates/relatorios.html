@@ -197,6 +197,19 @@
         </div>
     </div>
 </div>
+
+<div class="row g-4 mt-2">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-transparent">
+                <h5 class="mb-0">📊 Produção Mensal</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="chartMensal"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
 {% endif %}
 {% endblock %}
 
@@ -261,6 +274,23 @@ new Chart(document.getElementById('chartLucro').getContext('2d'), {
     },
     options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
 });
+
+const coresMensais = ['#8E44AD', '#2E86C1', '#27AE60', '#F39C12', '#E74C3C', '#1ABC9C', '#9B59B6', '#3498DB', '#2ECC71', '#F1C40F', '#E67E22', '#1F618D'];
+
+if ({{ meses_labels|length }} > 0) {
+new Chart(document.getElementById('chartMensal').getContext('2d'), {
+    type: 'pie',
+    data: {
+        labels: {{ meses_labels|tojson }},
+        datasets: [{
+            label: 'Litros',
+            data: {{ valores_mensais|tojson }},
+            backgroundColor: coresMensais.slice(0, {{ meses_labels|length }})
+        }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+});
+}
 {% endif %}
 </script>
 {% endblock %}
