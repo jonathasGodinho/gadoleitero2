@@ -995,6 +995,18 @@ def relatorios():
                 vals_dia = [float(v.total) for v in vendas if v.data == d]
                 valores_venda.append(sum(vals_dia))
         
+        vendas_por_mes = {}
+        for v in vendas:
+            mes_key = v.data.strftime('%Y-%m')
+            vendas_por_mes[mes_key] = vendas_por_mes.get(mes_key, 0) + float(v.total)
+        meses_vendas = sorted(vendas_por_mes.keys())
+        if meses_vendas:
+            meses_labels_vendas = [datetime.strptime(m + '-01', '%Y-%m-%d').strftime('%m/%Y') for m in meses_vendas]
+            valores_vendas_mensais = [vendas_por_mes[m] for m in meses_vendas]
+        else:
+            meses_labels_vendas = []
+            valores_vendas_mensais = []
+        
         return render_template('relatorios.html',
                                data_ini=data_ini, data_fim=data_fim,
                                tipo=tipo,
@@ -1002,7 +1014,9 @@ def relatorios():
                                total_litros_vendas=total_litros_vendas,
                                total_valor_vendas=total_valor_vendas,
                                dias_grafico=dias_grafico,
-                               valores_venda=valores_venda)
+                               valores_venda=valores_venda,
+                               meses_labels_vendas=meses_labels_vendas,
+                               valores_vendas_mensais=valores_vendas_mensais)
     
     producoes = ProducaoLeite.query.filter(
         ProducaoLeite.data >= data_ini_date, ProducaoLeite.data <= data_fim_date
@@ -1050,13 +1064,32 @@ def relatorios():
     for p in producoes:
         mes_key = p.data.strftime('%Y-%m')
         producao_por_mes[mes_key] = producao_por_mes.get(mes_key, 0) + float(p.litros)
-    meses_grafico = sorted(producao_por_mes.keys())
-    if meses_grafico:
-        meses_labels = [datetime.strptime(m + '-01', '%Y-%m-%d').strftime('%m/%Y') for m in meses_grafico]
-        valores_mensais = [producao_por_mes[m] for m in meses_grafico]
+
+    custo_por_mes = {}
+    for c in consumos:
+        mes_key = c.data.strftime('%Y-%m')
+        custo_por_mes[mes_key] = custo_por_mes.get(mes_key, 0) + float(c.custo)
+    for d in despesas:
+        mes_key = d.data.strftime('%Y-%m')
+        custo_por_mes[mes_key] = custo_por_mes.get(mes_key, 0) + float(d.valor)
+
+    receita_por_mes = {}
+    for p in producoes:
+        mes_key = p.data.strftime('%Y-%m')
+        preco = float(p.preco_venda) if p.preco_venda else float(get_preco_vigente(p.data))
+        receita_por_mes[mes_key] = receita_por_mes.get(mes_key, 0) + float(p.litros) * preco
+
+    todos_meses = sorted(set(list(producao_por_mes.keys()) + list(custo_por_mes.keys()) + list(receita_por_mes.keys())))
+    if todos_meses:
+        meses_labels = [datetime.strptime(m + '-01', '%Y-%m-%d').strftime('%m/%Y') for m in todos_meses]
+        valores_mensais = [producao_por_mes.get(m, 0) for m in todos_meses]
+        custo_mensal = [custo_por_mes.get(m, 0) for m in todos_meses]
+        lucro_mensal = [receita_por_mes.get(m, 0) - custo_por_mes.get(m, 0) for m in todos_meses]
     else:
         meses_labels = []
         valores_mensais = []
+        custo_mensal = []
+        lucro_mensal = []
     
     preco_medio = get_preco_vigente(data_fim_date)
 
@@ -1069,7 +1102,8 @@ def relatorios():
                            dias_grafico=dias_grafico, valores_prod=valores_prod,
                            custos_dia=custos_dia, custo_por_tipo=custo_por_tipo,
                            preco_medio=preco_medio,
-                           meses_labels=meses_labels, valores_mensais=valores_mensais)
+                           meses_labels=meses_labels, valores_mensais=valores_mensais,
+                           custo_mensal=custo_mensal, lucro_mensal=lucro_mensal)
 
 # ========== FINANCEIRO ==========
 

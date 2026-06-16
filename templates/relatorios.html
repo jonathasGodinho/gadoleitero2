@@ -74,13 +74,23 @@
 </div>
 
 <div class="row g-4">
-    <div class="col-12">
+    <div class="col-12 col-md-6">
         <div class="card">
             <div class="card-header bg-transparent">
                 <h5 class="mb-0">📊 Vendas por Dia</h5>
             </div>
             <div class="card-body">
                 <canvas id="chartVendas"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6">
+        <div class="card">
+            <div class="card-header bg-transparent">
+                <h5 class="mb-0">📊 Vendas Mensais</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="chartVendasMensal"></canvas>
             </div>
         </div>
     </div>
@@ -199,13 +209,36 @@
 </div>
 
 <div class="row g-4 mt-2">
-    <div class="col-12">
+    <div class="col-12 col-md-6">
         <div class="card">
             <div class="card-header bg-transparent">
                 <h5 class="mb-0">📊 Produção Mensal</h5>
             </div>
             <div class="card-body">
                 <canvas id="chartMensal"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6">
+        <div class="card">
+            <div class="card-header bg-transparent">
+                <h5 class="mb-0">📊 Custo Mensal</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="chartCustoMensal"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mt-2">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-transparent">
+                <h5 class="mb-0">💰 Lucro Mensal</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="chartLucroMensal"></canvas>
             </div>
         </div>
     </div>
@@ -228,6 +261,21 @@ new Chart(document.getElementById('chartVendas').getContext('2d'), {
     },
     options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
 });
+
+if ({{ meses_labels_vendas|length }} > 0) {
+new Chart(document.getElementById('chartVendasMensal').getContext('2d'), {
+    type: 'pie',
+    data: {
+        labels: {{ meses_labels_vendas|tojson }},
+        datasets: [{
+            label: 'Vendas (R$)',
+            data: {{ valores_vendas_mensais|tojson }},
+            backgroundColor: ['#8E44AD', '#2E86C1', '#27AE60', '#F39C12', '#E74C3C', '#1ABC9C', '#9B59B6', '#3498DB', '#2ECC71', '#F1C40F', '#E67E22', '#1F618D']
+        }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+});
+}
 {% else %}
 const coresPizza = ['#1B4332', '#2D6A4F', '#40916C', '#52B788', '#74C69D', '#95D5B2', '#B7E4C7', '#D8F3DC', '#1D3557', '#457B9D', '#A8DADC', '#F1FAEE', '#E63946', '#F4A261', '#E76F51', '#2A9D8F', '#264653', '#6D6875', '#B5838D', '#E5989B', '#FFB4A2', '#FFCDB2', '#7B2CBF', '#9D4EDD', '#C77DFF', '#E0AAFF', '#5A189A', '#3C096C', '#10002B', '#240046'];
 
@@ -285,6 +333,32 @@ new Chart(document.getElementById('chartMensal').getContext('2d'), {
         datasets: [{
             label: 'Litros',
             data: {{ valores_mensais|tojson }},
+            backgroundColor: coresMensais.slice(0, {{ meses_labels|length }})
+        }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+});
+
+new Chart(document.getElementById('chartCustoMensal').getContext('2d'), {
+    type: 'pie',
+    data: {
+        labels: {{ meses_labels|tojson }},
+        datasets: [{
+            label: 'Custo (R$)',
+            data: {{ custo_mensal|tojson }},
+            backgroundColor: coresMensais.slice(0, {{ meses_labels|length }})
+        }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+});
+
+new Chart(document.getElementById('chartLucroMensal').getContext('2d'), {
+    type: 'pie',
+    data: {
+        labels: {{ meses_labels|tojson }},
+        datasets: [{
+            label: 'Lucro (R$)',
+            data: {{ lucro_mensal|tojson }},
             backgroundColor: coresMensais.slice(0, {{ meses_labels|length }})
         }]
     },
