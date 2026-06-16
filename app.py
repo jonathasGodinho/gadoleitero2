@@ -230,10 +230,11 @@ def health():
 
 @app.route('/api/clima')
 def api_clima():
+    API_KEY = os.environ.get('OPENWEATHER_API_KEY', '')
+    if not API_KEY:
+        return {'temp': 25, 'description': 'ensolarado', 'humidity': 60, 'icon': '01d'}
     import requests
     try:
-        # OpenWeatherMap API - voce precisa de uma chave gratuita em openweathermap.org
-        API_KEY = 'sua_chave_aqui'  # Substitua pela sua chave
         CITY = 'Sao Paulo,BR'
         url = f'http://api.openweathermap.org/data/2.5/weather?q={CITY}&appid={API_KEY}&units=metric&lang=pt_br'
         resp = requests.get(url, timeout=5)
@@ -723,17 +724,31 @@ def producao():
         flash('Produção registrada com sucesso!', 'success')
         return redirect(url_for('producao'))
     
+    hoje = date.today()
+    primeiro_dia_mes = hoje.replace(day=1)
+    ultimo_dia_mes = hoje.replace(day=calendar.monthrange(hoje.year, hoje.month)[1])
+    
     filtro_data_ini = request.args.get('data_ini')
     filtro_data_fim = request.args.get('data_fim')
     
-    query = ProducaoLeite.query
     if filtro_data_ini:
-        query = query.filter(ProducaoLeite.data >= datetime.strptime(filtro_data_ini, '%Y-%m-%d').date())
-    if filtro_data_fim:
-        query = query.filter(ProducaoLeite.data <= datetime.strptime(filtro_data_fim, '%Y-%m-%d').date())
+        data_ini = datetime.strptime(filtro_data_ini, '%Y-%m-%d').date()
+    else:
+        data_ini = primeiro_dia_mes
+        filtro_data_ini = data_ini.strftime('%Y-%m-%d')
     
-    producoes = query.order_by(ProducaoLeite.data.desc()).all()
-    today = date.today().strftime('%Y-%m-%d')
+    if filtro_data_fim:
+        data_fim = datetime.strptime(filtro_data_fim, '%Y-%m-%d').date()
+    else:
+        data_fim = ultimo_dia_mes
+        filtro_data_fim = data_fim.strftime('%Y-%m-%d')
+    
+    producoes = ProducaoLeite.query.filter(
+        ProducaoLeite.data >= data_ini,
+        ProducaoLeite.data <= data_fim
+    ).order_by(ProducaoLeite.data.desc()).all()
+    
+    today = hoje.strftime('%Y-%m-%d')
     
     total_litros_geral = sum(float(p.litros) for p in producoes)
     total_receber_geral = sum(float(p.total_receber) for p in producoes if p.total_receber)
@@ -743,7 +758,9 @@ def producao():
                            today=today,
                            preco_padrao=2.22,
                            total_litros_geral=total_litros_geral,
-                           total_receber_geral=total_receber_geral)
+                           total_receber_geral=total_receber_geral,
+                           data_ini=filtro_data_ini,
+                           data_fim=filtro_data_fim)
 
 @app.route('/producao/editar/<int:id>', methods=['GET', 'POST'])
 @login_required
