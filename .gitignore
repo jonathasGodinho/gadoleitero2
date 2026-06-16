@@ -33,5 +33,9 @@ start_server.bat
 *.sql
 backup_*.sql
 
+# Backups (mantem .gitkeep)
+backups/
+!backups/.gitkeep
+
 # Netlify
 .netlify/

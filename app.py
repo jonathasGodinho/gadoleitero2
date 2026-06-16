@@ -1300,9 +1300,7 @@ def backup():
     from datetime import datetime
     backup_name = f'backup_terra_roxa_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
     
-    # Backup via SQLAlchemy (funciona com PostgreSQL e SQLite)
-    from sqlalchemy import inspect
-    buffer = []
+    backup_data = {}
     for table_name in ['animal', 'tipo_racao', 'producao_leite', 'consumo_racao',
                        'preco_leite', 'despesa', 'orcamento', 'user', 'audit_log',
                        'cliente', 'venda_avulsa', 'saude_animal']:
@@ -1311,19 +1309,48 @@ def backup():
             if table is None:
                 continue
             rows = db.session.execute(table.select()).fetchall()
-            for row in rows:
-                buffer.append(f'-- {table_name}')
-                buffer.append(str(dict(row._mapping)))
+            backup_data[table_name] = [dict(row._mapping) for row in rows]
         except Exception:
-            pass
+            backup_data[table_name] = []
     
-    sql_content = '\n'.join(buffer)
+    from backup_util import BACKUP_DIR
+    BACKUP_DIR.mkdir(exist_ok=True)
+    filepath = BACKUP_DIR / backup_name
+    import json
+    with open(filepath, 'w', encoding='utf-8') as f:
+        json.dump(backup_data, f, ensure_ascii=False, indent=2, default=str)
     
-    response = make_response(sql_content)
+    response = make_response(json.dumps(backup_data, ensure_ascii=False, indent=2, default=str))
     response.headers['Content-Disposition'] = f'attachment; filename={backup_name}'
     response.headers['Content-Type'] = 'application/json'
     log_auditoria('Backup realizado', f'Arquivo: {backup_name}')
     return response
+
+@app.route('/admin/backup/listar')
+@login_required
+def listar_backups():
+    if current_user.role != 'admin':
+        return jsonify([])
+    from backup_util import list_backups
+    backups = list_backups()
+    return jsonify([{
+        'filename': b['filename'],
+        'size': f"{b['size'] / 1024:.1f} KB",
+        'date': b['date'].strftime('%d/%m/%Y %H:%M')
+    } for b in backups])
+
+@app.route('/admin/backup/download/<filename>')
+@login_required
+def download_backup(filename):
+    if current_user.role != 'admin':
+        flash('Acesso restrito', 'danger')
+        return redirect(url_for('index'))
+    from backup_util import BACKUP_DIR
+    filepath = BACKUP_DIR / filename
+    if not filepath.exists():
+        flash('Arquivo nao encontrado', 'danger')
+        return redirect(url_for('backup'))
+    return send_file(str(filepath), as_attachment=True, download_name=filename)
 
 # ========== VENDAS AVULSAS ==========
 
