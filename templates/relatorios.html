@@ -173,16 +173,6 @@
 </div>
 
 <div class="row g-4">
-    <div class="col-12 col-md-8">
-        <div class="card">
-            <div class="card-header bg-transparent">
-                <h5 class="mb-0">📊 Produção Diária</h5>
-            </div>
-            <div class="card-body">
-                <canvas id="chartProducao"></canvas>
-            </div>
-        </div>
-    </div>
     <div class="col-12 col-md-4">
         <div class="card">
             <div class="card-header bg-transparent">
@@ -190,19 +180,6 @@
             </div>
             <div class="card-body">
                 <canvas id="chartCusto"></canvas>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="row g-4 mt-2">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header bg-transparent">
-                <h5 class="mb-0">💰 Lucro Diário</h5>
-            </div>
-            <div class="card-body">
-                <canvas id="chartLucro"></canvas>
             </div>
         </div>
     </div>
@@ -277,21 +254,6 @@ new Chart(document.getElementById('chartVendasMensal').getContext('2d'), {
 });
 }
 {% else %}
-const coresPizza = ['#1B4332', '#2D6A4F', '#40916C', '#52B788', '#74C69D', '#95D5B2', '#B7E4C7', '#D8F3DC', '#1D3557', '#457B9D', '#A8DADC', '#F1FAEE', '#E63946', '#F4A261', '#E76F51', '#2A9D8F', '#264653', '#6D6875', '#B5838D', '#E5989B', '#FFB4A2', '#FFCDB2', '#7B2CBF', '#9D4EDD', '#C77DFF', '#E0AAFF', '#5A189A', '#3C096C', '#10002B', '#240046'];
-
-new Chart(document.getElementById('chartProducao').getContext('2d'), {
-    type: 'pie',
-    data: {
-        labels: {{ dias_grafico|tojson }},
-        datasets: [{
-            label: 'Litros',
-            data: {{ valores_prod|tojson }},
-            backgroundColor: coresPizza.slice(0, {{ dias_grafico|length }})
-        }]
-    },
-    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
-});
-
 new Chart(document.getElementById('chartCusto').getContext('2d'), {
     type: 'pie',
     data: {
@@ -299,25 +261,6 @@ new Chart(document.getElementById('chartCusto').getContext('2d'), {
         datasets: [{
             data: {{ custo_por_tipo.values()|list|tojson }},
             backgroundColor: ['#2C3E50', '#27AE60', '#1E8449', '#6E4F32', '#F1C40F']
-        }]
-    },
-    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
-});
-
-const precoLitro = {{ preco_medio }};
-const lucroData = [];
-{% for i in range(valores_prod|length) %}
-lucroData.push({{ valores_prod[i] }} * precoLitro - {{ custos_dia[i] }});
-{% endfor %}
-
-new Chart(document.getElementById('chartLucro').getContext('2d'), {
-    type: 'pie',
-    data: {
-        labels: {{ dias_grafico|tojson }},
-        datasets: [{
-            label: 'Lucro (R$)',
-            data: lucroData,
-            backgroundColor: coresPizza.slice(0, {{ dias_grafico|length }})
         }]
     },
     options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
