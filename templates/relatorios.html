@@ -204,35 +204,35 @@
 <script>
 {% if tipo == 'vendas-avulsas' %}
 new Chart(document.getElementById('chartVendas').getContext('2d'), {
-    type: 'bar',
+    type: 'pie',
     data: {
         labels: {{ dias_grafico|tojson }},
         datasets: [{
             label: 'Vendas (R$)',
             data: {{ valores_venda|tojson }},
-            backgroundColor: '#9B59B6',
-            borderRadius: 6,
-            borderSkipped: false
+            backgroundColor: ['#8E44AD', '#9B59B6', '#AF7AC5', '#BB8FCE', '#C39BD3', '#D2B4DE', '#E8DAEF', '#7FB3D8', '#85C1E9', '#AED6F1', '#D6EAF8', '#76D7C4', '#A3E4D7', '#ABEBC6', '#A9DFBF', '#F9E79F', '#FAD7A0', '#F5B041', '#EB984E', '#E59866', '#DC7633', '#CA6F1E', '#BA4A00', '#A04000', '#6E2C00', '#1A5276', '#1F618D', '#2E86C1', '#3498DB', '#5DADE2']
         }]
     },
-    options: { responsive: true, scales: { y: { beginAtZero: true } } }
+    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
 });
 {% else %}
+const coresPizza = ['#1B4332', '#2D6A4F', '#40916C', '#52B788', '#74C69D', '#95D5B2', '#B7E4C7', '#D8F3DC', '#1D3557', '#457B9D', '#A8DADC', '#F1FAEE', '#E63946', '#F4A261', '#E76F51', '#2A9D8F', '#264653', '#6D6875', '#B5838D', '#E5989B', '#FFB4A2', '#FFCDB2', '#7B2CBF', '#9D4EDD', '#C77DFF', '#E0AAFF', '#5A189A', '#3C096C', '#10002B', '#240046'];
+
 new Chart(document.getElementById('chartProducao').getContext('2d'), {
-    type: 'bar',
+    type: 'pie',
     data: {
         labels: {{ dias_grafico|tojson }},
         datasets: [{
             label: 'Litros',
             data: {{ valores_prod|tojson }},
-            backgroundColor: '#27AE60'
+            backgroundColor: coresPizza.slice(0, {{ dias_grafico|length }})
         }]
     },
-    options: { responsive: true, scales: { y: { beginAtZero: true } } }
+    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
 });
 
 new Chart(document.getElementById('chartCusto').getContext('2d'), {
-    type: 'doughnut',
+    type: 'pie',
     data: {
         labels: {{ custo_por_tipo.keys()|list|tojson }},
         datasets: [{
@@ -240,7 +240,7 @@ new Chart(document.getElementById('chartCusto').getContext('2d'), {
             backgroundColor: ['#2C3E50', '#27AE60', '#1E8449', '#6E4F32', '#F1C40F']
         }]
     },
-    options: { responsive: true }
+    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
 });
 
 const precoLitro = {{ preco_medio }};
@@ -250,19 +250,16 @@ lucroData.push({{ valores_prod[i] }} * precoLitro - {{ custos_dia[i] }});
 {% endfor %}
 
 new Chart(document.getElementById('chartLucro').getContext('2d'), {
-    type: 'line',
+    type: 'pie',
     data: {
         labels: {{ dias_grafico|tojson }},
         datasets: [{
             label: 'Lucro (R$)',
             data: lucroData,
-            borderColor: '#F1C40F',
-            backgroundColor: 'rgba(241, 196, 15, 0.2)',
-            fill: true,
-            tension: 0.4
+            backgroundColor: coresPizza.slice(0, {{ dias_grafico|length }})
         }]
     },
-    options: { responsive: true }
+    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
 });
 {% endif %}
 </script>
