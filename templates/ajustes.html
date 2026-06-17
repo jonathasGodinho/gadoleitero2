@@ -39,7 +39,7 @@
                             {% for preco in precos %}
                             <tr>
                                 <td>{{ preco.data_vigencia.strftime('%d/%m/%Y') }}</td>
-                                <td>R$ {{ "%.4f"|format(preco.preco_litro) }}</td>
+                                <td>R$ {{ "%.2f"|format(preco.preco_litro) }}</td>
                             </tr>
                             {% else %}
                             <tr>

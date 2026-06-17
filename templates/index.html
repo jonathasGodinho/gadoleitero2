@@ -787,23 +787,24 @@
         }
     });
 
-    // Weather API - Atualizado com mais informações
-    fetch('/api/clima')
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('temp-atual').textContent = data.temp.toFixed(1) + '°C';
-            document.getElementById('clima-desc').textContent = data.description;
-            document.getElementById('umidade').textContent = data.humidity;
-            if (document.getElementById('sensacao')) {
-                document.getElementById('sensacao').textContent = (data.feels_like || data.temp).toFixed(1);
-            }
-        })
-        .catch(error => {
-            console.error('Erro ao buscar clima:', error);
-            document.getElementById('temp-atual').textContent = '25.0°C';
-            document.getElementById('clima-desc').textContent = 'Ensolarado';
-            document.getElementById('umidade').textContent = '60';
-        });
+    // Weather API - Atualizado automaticamente a cada 5 minutos
+    function fetchWeather() {
+        fetch('/api/clima')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('temp-atual').textContent = data.temp.toFixed(1) + '°C';
+                document.getElementById('clima-desc').textContent = data.description;
+                document.getElementById('umidade').textContent = data.humidity;
+                if (document.getElementById('sensacao')) {
+                    document.getElementById('sensacao').textContent = (data.feels_like || data.temp).toFixed(1);
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao buscar clima:', error);
+            });
+    }
+    fetchWeather();
+    setInterval(fetchWeather, 300000);
     
     // Atualizar preço do leite com feedback visual
     function atualizarPreco(novoPreco) {
