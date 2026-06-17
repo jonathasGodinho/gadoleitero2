@@ -269,22 +269,43 @@ def health():
 
 @app.route('/api/clima')
 def api_clima():
-    API_KEY = os.environ.get('OPENWEATHER_API_KEY', '')
-    if not API_KEY:
-        return {'temp': 25, 'description': 'ensolarado', 'humidity': 60, 'icon': '01d', 'location': 'Santo Antônio do Matupi - AM', 'feels_like': 24}
     import requests
+    WMO_CODES = {
+        0: 'ceu limpo', 1: 'principalmente limpo', 2: 'parcialmente nublado', 3: 'nublado',
+        45: 'nevoeiro', 48: 'nevoeiro denso',
+        51: 'chuvisco leve', 53: 'chuvisco moderado', 55: 'chuvisco intenso',
+        61: 'chuva leve', 63: 'chuva moderada', 65: 'chuva forte',
+        66: 'chuva congelante leve', 67: 'chuva congelante forte',
+        71: 'neve leve', 73: 'neve moderada', 75: 'neve intensa',
+        77: 'graos de neve',
+        80: 'pancadas de chuva leves', 81: 'pancadas de chuva moderadas', 82: 'pancadas de chuva violentas',
+        85: 'pancadas de neve leves', 86: 'pancadas de neve intensas',
+        95: 'tempestade', 96: 'tempestade com granizo leve', 99: 'tempestade com granizo forte'
+    }
+    WMO_ICONS = {
+        0: '01d', 1: '02d', 2: '03d', 3: '04d',
+        45: '50d', 48: '50d',
+        51: '09d', 53: '09d', 55: '09d',
+        61: '10d', 63: '10d', 65: '10d',
+        66: '13d', 67: '13d',
+        71: '13d', 73: '13d', 75: '13d', 77: '13d',
+        80: '09d', 81: '09d', 82: '09d',
+        85: '13d', 86: '13d',
+        95: '11d', 96: '11d', 99: '11d'
+    }
     try:
         LAT, LON = '-7.9268788', '-61.571846'
-        url = f'http://api.openweathermap.org/data/2.5/weather?lat={LAT}&lon={LON}&appid={API_KEY}&units=metric&lang=pt_br'
+        url = f'https://api.open-meteo.com/v1/forecast?latitude={LAT}&longitude={LON}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code'
         resp = requests.get(url, timeout=5)
-        data = resp.json()
+        data = resp.json()['current']
+        code = data['weather_code']
         return {
-            'temp': data['main']['temp'],
-            'description': data['weather'][0]['description'],
-            'humidity': data['main']['humidity'],
-            'icon': data['weather'][0]['icon'],
+            'temp': data['temperature_2m'],
+            'description': WMO_CODES.get(code, 'nublado'),
+            'humidity': data['relative_humidity_2m'],
+            'icon': WMO_ICONS.get(code, '04d'),
             'location': 'Santo Antônio do Matupi - AM',
-            'feels_like': data['main']['feels_like']
+            'feels_like': data['apparent_temperature']
         }
     except:
         return {'temp': 25, 'description': 'ensolarado', 'humidity': 60, 'icon': '01d', 'location': 'Santo Antônio do Matupi - AM', 'feels_like': 24}
