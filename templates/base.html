@@ -584,7 +584,11 @@ body.dark-mode.page-relatorios,
             </a>
             <a class="nav-link {% if request.path == '/animais' %}active{% endif %}" href="/animais" data-bs-toggle="tooltip" data-bs-placement="right" title="Animais">
                 <span class="nav-icon">🐂</span>
-                <span class="sidebar-text">Animais</span>
+                <span class="sidebar-text">Animais
+                    {%- if qtd_alertas_saude > 0 -%}
+                    <span class="badge bg-danger rounded-pill ms-1" style="font-size: 0.6rem;">{{ qtd_alertas_saude }}</span>
+                    {%- endif -%}
+                </span>
             </a>
             <a class="nav-link {% if request.path == '/vendas-avulsas' %}active{% endif %}" href="/vendas-avulsas" data-bs-toggle="tooltip" data-bs-placement="right" title="Vendas Avulsas">
                 <span class="nav-icon">📦</span>

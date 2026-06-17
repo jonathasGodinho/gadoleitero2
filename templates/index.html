@@ -416,6 +416,7 @@
                 {% if alertas_saude %}
                     <div class="list-group list-group-flush">
                     {% for alerta in alertas_saude %}
+                        {% set dias_restantes = (alerta.proxima_dose - date.today()).days if alerta.proxima_dose else 0 %}
                         <div class="list-group-item border-0" style="border-bottom: 1px solid var(--border-light) !important;">
                             <div class="d-flex justify-content-between align-items-start">
                                 <div>
@@ -423,9 +424,15 @@
                                     <br>
                                     <small class="text-muted" style="font-size: 0.8rem;">{{ alerta.tipo }}</small>
                                 </div>
-                                <span class="badge bg-warning bg-opacity-25 text-warning" style="font-size: 0.75rem;">
-                                    {{ alerta.data_aplicacao.strftime('%d/%m') }}
-                                </span>
+                                <div class="text-end">
+                                    <span class="badge {% if dias_restantes <= 1 %}bg-danger{% elif dias_restantes <= 3 %}bg-warning text-dark{% else %}bg-success{% endif %}" style="font-size: 0.75rem;">
+                                        {{ alerta.proxima_dose.strftime('%d/%m') }}
+                                    </span>
+                                    <br>
+                                    <small class="{% if dias_restantes <= 1 %}text-danger{% elif dias_restantes <= 3 %}text-warning{% else %}text-success{% endif %}" style="font-size: 0.65rem; font-weight: 600;">
+                                        {% if dias_restantes == 0 %}HOJE{% elif dias_restantes == 1 %}Amanhã{% else %}{{ dias_restantes }} dias{% endif %}
+                                    </small>
+                                </div>
                             </div>
                         </div>
                     {% endfor %}
@@ -482,6 +489,23 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Produção Mensal (12 meses) -->
+<div class="row g-3 g-md-4 mb-4">
+    <div class="col-12">
+        <div class="card widget" draggable="true" data-widget="producao-mensal">
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center" style="border-bottom: 2px solid var(--border-light);">
+                <div class="d-flex align-items-center gap-2">
+                    <span style="font-size: 1.2rem;">📅</span>
+                    <h5 class="mb-0" style="font-size: 1rem; font-weight: 600;">Produção Mensal</h5>
+                </div>
+                <button class="btn btn-sm btn-outline-secondary border-0" onclick="toggleWidget('producao-mensal')" style="font-size: 0.75rem;">Ocultar</button>
+            </div>
+            <div class="card-body widget-content">
+                <canvas id="chartProducaoMensal" height="100"></canvas>
             </div>
         </div>
     </div>
@@ -686,6 +710,58 @@
         }
     });
 
+    // Gráfico Produção Mensal (12 meses)
+    const ctxMensal = document.getElementById('chartProducaoMensal').getContext('2d');
+    new Chart(ctxMensal, {
+        type: 'bar',
+        data: {
+            labels: {{ meses_labels|tojson }},
+            datasets: [{
+                label: 'Produção (L)',
+                data: {{ valores_mensais|tojson }},
+                backgroundColor: function(context) {
+                    const chart = context.chart;
+                    const {ctx, chartArea} = chart;
+                    if (!chartArea) return 'rgba(46, 204, 113, 0.6)';
+                    const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+                    gradient.addColorStop(0, 'rgba(46, 204, 113, 0.4)');
+                    gradient.addColorStop(1, 'rgba(46, 204, 113, 0.9)');
+                    return gradient;
+                },
+                borderRadius: 6,
+                borderSkipped: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(44, 62, 80, 0.9)',
+                    padding: 12,
+                    cornerRadius: 8,
+                    callbacks: {
+                        label: function(context) {
+                            return '🥛 ' + context.parsed.y.toFixed(0) + ' L';
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(0,0,0,0.05)' },
+                    ticks: { font: { size: 11 } }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { font: { size: 10 } }
+                }
+            }
+        }
+    });
+
     // Dashboard Widgets - Drag and Drop com animação
     let draggedWidget = null;
 
@@ -806,6 +882,26 @@
     fetchWeather();
     setInterval(fetchWeather, 300000);
     
+    // Toast de alertas de saúde ao carregar
+    const qtdAlertas = {{ alertas_saude|length }};
+    if (qtdAlertas > 0) {
+        const toastContainer = document.createElement('div');
+        toastContainer.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999;';
+        toastContainer.innerHTML = `
+            <div class="toast show align-items-center text-bg-warning border-0" role="alert">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        ⚠️ <strong>${qtdAlertas}</strong> alerta${qtdAlertas > 1 ? 's' : ''} de sa\u00fade pendente${qtdAlertas > 1 ? 's' : ''}
+                        <br><small>Vacinas/vermifuga\u00e7\u00f5es nos pr\u00f3ximos 7 dias</small>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(toastContainer);
+        setTimeout(() => { toastContainer.remove(); }, 8000);
+    }
+
     // Atualizar preço do leite com feedback visual
     function atualizarPreco(novoPreco) {
         if (!novoPreco || novoPreco <= 0) {

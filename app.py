@@ -168,7 +168,11 @@ def inject_cotacao():
     hoje = date.today()
     preco = get_preco_vigente(hoje)
     data_fmt = hoje.strftime('%d/%m/%Y')
-    return dict(preco_vigente_global=preco, data_cotacao_global=data_fmt)
+    alertas = SaudeAnimal.query.filter(
+        SaudeAnimal.proxima_dose <= hoje + timedelta(days=7),
+        SaudeAnimal.proxima_dose >= hoje
+    ).count()
+    return dict(preco_vigente_global=preco, data_cotacao_global=data_fmt, qtd_alertas_saude=alertas, date=date)
 
 def log_auditoria(acao, detalhes='', user_id=None):
     if user_id is None and current_user.is_authenticated:
@@ -449,6 +453,27 @@ def index():
     total_litros_mes = sum(p.litros for p in producoes_mes)
     receita_mensal = sum(float(p.litros) * float(p.preco_venda if p.preco_venda else get_preco_vigente(p.data)) for p in producoes_mes)
     
+    # Produção mensal (últimos 12 meses)
+    meses_labels = []
+    valores_mensais = []
+    for i in range(11, -1, -1):
+        mes = today.month - i
+        ano = today.year
+        while mes < 1:
+            mes += 12
+            ano -= 1
+        while mes > 12:
+            mes -= 12
+            ano += 1
+        primeiro = date(ano, mes, 1)
+        if mes == 12:
+            ultimo = date(ano + 1, 1, 1) - timedelta(days=1)
+        else:
+            ultimo = date(ano, mes + 1, 1) - timedelta(days=1)
+        prods = ProducaoLeite.query.filter(ProducaoLeite.data >= primeiro, ProducaoLeite.data <= ultimo).all()
+        meses_labels.append(date(ano, mes, 1).strftime('%m/%Y'))
+        valores_mensais.append(sum(p.litros for p in prods))
+
     # Cotação atual do leite
     preco_vigente_hoje = get_preco_vigente(today)
     data_preco_vigente = PrecoLeite.query.filter(PrecoLeite.data_vigencia <= today).order_by(PrecoLeite.data_vigencia.desc()).first()
@@ -478,8 +503,10 @@ def index():
                            receita_mensal=receita_mensal,
                            custo_litro_dias=custo_litro_dias,
                            custo_litro_valores=custo_litro_valores,
-                           custo_litro_media=custo_litro_media)
-
+                            custo_litro_media=custo_litro_media,
+                            meses_labels=meses_labels,
+                            valores_mensais=valores_mensais)
+ 
 @app.route('/relatorios/pdf')
 @login_required
 def relatorio_pdf():
@@ -686,6 +713,76 @@ def relatorio_pdf():
         response.headers['Content-Disposition'] = f'attachment; filename=relatorio_terra_roxa_{data_ini}_{data_fim}.html'
         response.headers['Content-Type'] = 'text/html'
         return response
+
+@app.route('/relatorios/csv')
+@login_required
+def relatorio_csv():
+    import csv
+    from io import StringIO
+    from datetime import datetime
+
+    data_ini = request.args.get('data_ini')
+    data_fim = request.args.get('data_fim')
+
+    if not data_ini:
+        data_ini = date.today().replace(day=1).strftime('%Y-%m-%d')
+    if not data_fim:
+        data_fim = date.today().strftime('%Y-%m-%d')
+
+    data_ini_date = datetime.strptime(data_ini, '%Y-%m-%d').date()
+    data_fim_date = datetime.strptime(data_fim, '%Y-%m-%d').date()
+
+    producoes = ProducaoLeite.query.filter(
+        ProducaoLeite.data >= data_ini_date, ProducaoLeite.data <= data_fim_date
+    ).all()
+    consumos = ConsumoRacao.query.filter(
+        ConsumoRacao.data >= data_ini_date, ConsumoRacao.data <= data_fim_date
+    ).all()
+    despesas = Despesa.query.filter(
+        Despesa.data >= data_ini_date, Despesa.data <= data_fim_date
+    ).all()
+
+    si = StringIO()
+    cw = csv.writer(si)
+
+    # Resumo
+    total_litros = sum(p.litros for p in producoes)
+    custo_total = sum(c.custo for c in consumos) + sum(d.valor for d in despesas)
+    receita = sum(float(p.litros) * float(p.preco_venda if p.preco_venda else get_preco_vigente(p.data)) for p in producoes)
+
+    cw.writerow(['Terra Roxa System - Relatorio'])
+    cw.writerow([f'Periodo: {data_ini} a {data_fim}'])
+    cw.writerow([])
+    cw.writerow(['RESUMO EXECUTIVO'])
+    cw.writerow(['Metrica', 'Valor'])
+    cw.writerow(['Total Litros', f'{total_litros:.2f}'])
+    cw.writerow(['Receita Total', f'{receita:.2f}'])
+    cw.writerow(['Custo Total', f'{custo_total:.2f}'])
+    cw.writerow(['Lucro Liquido', f'{receita - custo_total:.2f}'])
+    cw.writerow([])
+
+    # Produção detalhada
+    cw.writerow(['PRODUCAO DETALHADA'])
+    cw.writerow(['Data', 'Animal', 'Litros', 'Preco/L', 'Valor'])
+    for p in producoes:
+        prec = p.preco_venda if p.preco_venda else get_preco_vigente(p.data)
+        nome = p.animal.nome if p.animal else 'Geral'
+        cw.writerow([p.data.isoformat(), nome, p.litros, prec, float(p.litros) * float(prec)])
+    cw.writerow([])
+
+    # Custos
+    cw.writerow(['CUSTOS'])
+    cw.writerow(['Tipo', 'Data', 'Categoria/Descricao', 'Valor'])
+    for c in consumos:
+        cw.writerow(['Racao', c.data.isoformat(), c.tipo_racao.nome, c.custo])
+    for d in despesas:
+        cw.writerow(['Despesa', d.data.isoformat(), d.categoria or 'Geral', d.valor])
+
+    output = si.getvalue()
+    response = make_response(output)
+    response.headers['Content-Disposition'] = f'attachment; filename=relatorio_terra_roxa_{data_ini}_{data_fim}.csv'
+    response.headers['Content-Type'] = 'text/csv; charset=utf-8'
+    return response
 
 @app.route('/cooperativas')
 @login_required
