@@ -85,6 +85,7 @@
                                 </td>
                                 <td>
                                     <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editModal{{ animal.id }}">✏️</button>
+                                    <a href="/animais/saude/{{ animal.id }}" class="btn btn-sm btn-outline-success" title="Saúde">🏥</a>
                                     <a href="/animais/excluir/{{ animal.id }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Excluir animal?')">✕</a>
                                 </td>
                             </tr>
