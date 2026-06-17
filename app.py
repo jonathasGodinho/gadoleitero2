@@ -747,7 +747,7 @@ def relatorio_csv():
 
     # Resumo
     total_litros = sum(p.litros for p in producoes)
-    custo_total = sum(c.custo for c in consumos) + sum(d.valor for d in despesas)
+    custo_total = float(sum(c.custo for c in consumos)) + float(sum(d.valor for d in despesas))
     receita = sum(float(p.litros) * float(p.preco_venda if p.preco_venda else get_preco_vigente(p.data)) for p in producoes)
 
     cw.writerow(['Terra Roxa System - Relatorio'])
