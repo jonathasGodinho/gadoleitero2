@@ -60,7 +60,7 @@
                             {% for p in producoes %}
                             <tr>
                                 <td>{{ p.data.strftime('%d/%m/%Y') }}</td>
-                                <td>{{ "%.2f"|format(p.litros) }} L</td>
+                                <td>{{ p.litros|int }} L</td>
                                 <td>R$ {{ "%.2f"|format(p.preco_venda) }}</td>
                                 <td>R$ {{ "%.2f"|format(p.total_receber) }}</td>
                                 <td>
@@ -78,7 +78,7 @@
                         <tfoot class="table-dark">
                             <tr>
                                 <th>Total</th>
-                                <th>{{ "%.2f"|format(total_litros_geral) }} L</th>
+                                <th>{{ total_litros_geral|int }} L</th>
                                 <th></th>
                                 <th>R$ {{ "%.2f"|format(total_receber_geral) }}</th>
                                 <th></th>

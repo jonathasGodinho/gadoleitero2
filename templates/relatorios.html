@@ -58,7 +58,7 @@
         <div class="card card-metric" style="background: linear-gradient(135deg, #2ECC71 0%, #27AE60 100%);">
             <div class="card-body">
                 <h6 class="opacity-75">🥛 Total Litros</h6>
-                <h2 class="h4">{{ "%.1f"|format(total_litros_vendas) }}</h2>
+                <h2 class="h4">{{ total_litros_vendas|int }}</h2>
                 <small>litros</small>
             </div>
         </div>
@@ -119,7 +119,7 @@
                             <tr>
                                 <td>{{ venda.data.strftime('%d/%m/%Y') }}</td>
                                 <td>{{ venda.cliente.nome }}</td>
-                                <td>{{ "%.1f"|format(venda.litros) }} L</td>
+                                <td>{{ venda.litros|int }} L</td>
                                 <td>R$ {{ "%.2f"|format(venda.valor_litro) }}</td>
                                 <td><strong>R$ {{ "%.2f"|format(venda.total) }}</strong></td>
                             </tr>
@@ -141,7 +141,7 @@
         <div class="card card-metric">
             <div class="card-body">
                 <h6 class="opacity-75">🥛 Total Produção</h6>
-                <h2 class="h4">{{ "%.2f"|format(total_litros) }}</h2>
+                <h2 class="h4">{{ total_litros|int }}</h2>
                 <small>litros</small>
             </div>
         </div>

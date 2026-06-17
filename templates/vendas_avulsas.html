@@ -103,7 +103,7 @@
             <div class="col-6 col-md-3">
                 <div class="p-3 rounded-3 text-center" style="background: var(--success-light);">
                     <h6 class="text-muted mb-1" style="font-size: 0.85rem;">Total Litros</h6>
-                    <p class="h3 mb-0" style="color: var(--dark-green); font-weight: 700;">{{ "%.1f"|format(total_litros_geral) }} L</p>
+                    <p class="h3 mb-0" style="color: var(--dark-green); font-weight: 700;">{{ total_litros_geral|int }} L</p>
                 </div>
             </div>
             <div class="col-6 col-md-3">
@@ -139,7 +139,7 @@
                     <tr>
                         <td>{{ venda.data.strftime('%d/%m/%Y') }}</td>
                         <td>{{ venda.cliente.nome }}</td>
-                        <td>{{ "%.1f"|format(venda.litros) }} L</td>
+                        <td>{{ venda.litros|int }} L</td>
                         <td>R$ {{ "%.2f"|format(venda.valor_litro) }}</td>
                         <td><strong>R$ {{ "%.2f"|format(venda.total) }}</strong></td>
                         <td>
