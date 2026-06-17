@@ -1627,6 +1627,144 @@ def vendas_avulsas():
                            total_valor_geral=total_valor_geral,
                            today=date.today())
 
+@app.route('/vendas-avulsas/exportar/pdf')
+@login_required
+def vendas_exportar_pdf():
+    from datetime import datetime
+    vendas = VendaAvulsa.query.order_by(VendaAvulsa.data.asc()).all()
+    total_litros = sum(float(v.litros) for v in vendas)
+    total_valor = sum(float(v.total) for v in vendas)
+
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.pdfgen import canvas
+        from reportlab.lib.units import cm
+        from reportlab.lib import colors
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.enums import TA_CENTER
+        from io import BytesIO
+
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4,
+                                rightMargin=2*cm, leftMargin=2*cm,
+                                topMargin=2*cm, bottomMargin=2*cm)
+        styles = getSampleStyleSheet()
+        elements = []
+
+        title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'],
+                                     fontSize=20, textColor=colors.HexColor('#27AE60'),
+                                     spaceAfter=20, alignment=TA_CENTER)
+        elements.append(Paragraph('Terra Roxa System', title_style))
+        elements.append(Paragraph(f'Relatório de Vendas Avulsas - {datetime.now().strftime("%d/%m/%Y")}', styles['Normal']))
+        elements.append(Spacer(1, 0.5*cm))
+        elements.append(Paragraph('<hr/>', styles['Normal']))
+        elements.append(Spacer(1, 0.3*cm))
+
+        elements.append(Paragraph(f'<b>Total de Vendas:</b> {len(vendas)}  |  <b>Total Litros:</b> {total_litros:.0f} L  |  <b>Total R$:</b> {total_valor:.2f}', styles['Normal']))
+        elements.append(Spacer(1, 0.5*cm))
+
+        data = [['Data', 'Cliente', 'Litros', 'R$/L', 'Total']]
+        for v in vendas:
+            data.append([v.data.strftime('%d/%m/%Y'), v.cliente.nome, f'{v.litros:.1f}', f'{v.valor_litro:.2f}', f'{v.total:.2f}'])
+
+        t = Table(data, colWidths=[3*cm, 5*cm, 2.5*cm, 2.5*cm, 3*cm])
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#27AE60')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('GRID', (0, 0), (-1, -1), 1, colors.Color(0,0,0, alpha=0.3)),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F7F9F7')])
+        ]))
+        elements.append(t)
+
+        elements.append(Spacer(1, 1*cm))
+        elements.append(Paragraph(f'Gerado em {datetime.now().strftime("%d/%m/%Y %H:%M")} - Terra Roxa System', styles['Normal']))
+
+        doc.build(elements)
+        buffer.seek(0)
+        response = make_response(buffer.read())
+        response.headers['Content-Disposition'] = f'attachment; filename=vendas_avulsas_{datetime.now().strftime("%Y%m%d")}.pdf'
+        response.headers['Content-Type'] = 'application/pdf'
+        return response
+    except Exception as e:
+        html = '<html><head><title>Vendas Avulsas</title><style>'
+        html += 'body{font-family:Arial;padding:40px} h1{color:#27AE60} '
+        html += 'table{border-collapse:collapse;width:100%;margin:20px 0} '
+        html += 'th,td{border:1px solid #ddd;padding:12px;text-align:center} th{background:#27AE60;color:#fff}'
+        html += '</style></head><body>'
+        html += f'<h1>Terra Roxa System</h1><h3>Vendas Avulsas</h3>'
+        html += f'<p>Total: {len(vendas)} vendas | {total_litros:.0f} L | R$ {total_valor:.2f}</p><hr>'
+        html += '<table><tr><th>Data</th><th>Cliente</th><th>Litros</th><th>R$/L</th><th>Total</th></tr>'
+        for v in vendas:
+            html += f'<tr><td>{v.data.strftime("%d/%m/%Y")}</td><td>{v.cliente.nome}</td><td>{v.litros:.1f}</td><td>{v.valor_litro:.2f}</td><td>R$ {v.total:.2f}</td></tr>'
+        html += '</table></body></html>'
+        response = make_response(html)
+        response.headers['Content-Disposition'] = f'attachment; filename=vendas_avulsas_{datetime.now().strftime("%Y%m%d")}.html'
+        response.headers['Content-Type'] = 'text/html'
+        return response
+
+@app.route('/vendas-avulsas/exportar/excel')
+@login_required
+def vendas_exportar_excel():
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from datetime import datetime
+    from io import BytesIO
+
+    vendas = VendaAvulsa.query.order_by(VendaAvulsa.data.asc()).all()
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Vendas Avulsas'
+
+    header_font = Font(bold=True, color='FFFFFF', size=12)
+    header_fill = PatternFill(start_color='27AE60', end_color='27AE60', fill_type='solid')
+    thin_border = Border(
+        left=Side(style='thin'), right=Side(style='thin'),
+        top=Side(style='thin'), bottom=Side(style='thin'))
+
+    ws.cell(1, 1, 'Terra Roxa System - Vendas Avulsas').font = Font(bold=True, size=14, color='27AE60')
+    ws.merge_cells('A1:E1')
+    ws.cell(2, 1, f'Gerado em {datetime.now().strftime("%d/%m/%Y %H:%M")}')
+    ws.merge_cells('A2:E2')
+
+    headers = ['Data', 'Cliente', 'Litros', 'Valor/Litro', 'Total']
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(4, col, h)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center')
+        cell.border = thin_border
+
+    for i, v in enumerate(vendas, 5):
+        ws.cell(i, 1, v.data.strftime('%d/%m/%Y')).border = thin_border
+        ws.cell(i, 2, v.cliente.nome).border = thin_border
+        ws.cell(i, 3, float(v.litros)).border = thin_border
+        ws.cell(i, 4, float(v.valor_litro)).border = thin_border
+        ws.cell(i, 5, float(v.total)).border = thin_border
+
+    row = 5 + len(vendas)
+    ws.cell(row, 1, 'TOTAIS').font = Font(bold=True)
+    ws.cell(row, 1).border = thin_border
+    ws.cell(row, 2).border = thin_border
+    ws.cell(row, 3, sum(float(v.litros) for v in vendas)).font = Font(bold=True)
+    ws.cell(row, 3).border = thin_border
+    ws.cell(row, 4).border = thin_border
+    ws.cell(row, 5, sum(float(v.total) for v in vendas)).font = Font(bold=True)
+    ws.cell(row, 5).border = thin_border
+
+    for col in range(1, 6):
+        ws.column_dimensions[chr(64 + col)].width = 18
+
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    response = make_response(buffer.read())
+    response.headers['Content-Disposition'] = f'attachment; filename=vendas_avulsas_{datetime.now().strftime("%Y%m%d")}.xlsx'
+    response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    return response
+
 @app.route('/vendas-avulsas/excluir-cliente/<int:id>')
 @login_required
 def excluir_cliente(id):

@@ -117,9 +117,13 @@
 </div>
 
 <div class="card">
-    <div class="card-header bg-transparent d-flex align-items-center gap-2" style="border-bottom: 2px solid var(--border-light);">
+    <div class="card-header bg-transparent d-flex align-items-center gap-2 flex-wrap" style="border-bottom: 2px solid var(--border-light);">
         <span style="font-size: 1.2rem;">📄</span>
-        <h5 class="mb-0" style="font-size: 1rem; font-weight: 600;">Vendas Registradas</h5>
+        <h5 class="mb-0 me-auto" style="font-size: 1rem; font-weight: 600;">Vendas Registradas</h5>
+        <div class="d-flex gap-2">
+            <a href="/vendas-avulsas/exportar/pdf" class="btn btn-sm btn-outline-danger">📄 PDF</a>
+            <a href="/vendas-avulsas/exportar/excel" class="btn btn-sm btn-outline-success">📊 Excel</a>
+        </div>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
