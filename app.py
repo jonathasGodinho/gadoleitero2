@@ -1181,6 +1181,20 @@ def relatorios():
 
 # ========== FINANCEIRO ==========
 
+@app.route('/financeiro/editar/<int:id>', methods=['POST'])
+@login_required
+def editar_despesa(id):
+    despesa = Despesa.query.get_or_404(id)
+    despesa.descricao = request.form.get('descricao', despesa.descricao)
+    despesa.categoria = request.form.get('categoria', despesa.categoria)
+    despesa.valor = float(request.form.get('valor', despesa.valor))
+    despesa.data = datetime.strptime(request.form.get('data'), '%Y-%m-%d').date()
+    despesa.observacoes = request.form.get('observacoes', despesa.observacoes)
+    db.session.commit()
+    log_auditoria('Despesa editada', f'{despesa.descricao} - R$ {despesa.valor}')
+    flash('Despesa atualizada!', 'success')
+    return redirect(url_for('financeiro'))
+
 @app.route('/financeiro/excluir/<int:id>')
 @login_required
 def excluir_despesa(id):

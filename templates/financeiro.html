@@ -40,6 +40,12 @@
                         <td>R$ {{ "%.2f"|format(d.valor) }}</td>
                         <td>{{ d.data.strftime('%d/%m/%Y') }}</td>
                         <td>
+                            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editarDespesaModal"
+                                data-id="{{ d.id }}"
+                                data-descricao="{{ d.descricao }}"
+                                data-categoria="{{ d.categoria }}"
+                                data-valor="{{ d.valor }}"
+                                data-data="{{ d.data.strftime('%Y-%m-%d') }}">✎</button>
                             <a href="/financeiro/excluir/{{ d.id }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Excluir despesa?')">✕</a>
                         </td>
                     </tr>
@@ -94,4 +100,62 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Editar Despesa -->
+<div class="modal fade" id="editarDespesaModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: var(--navy-dark); color: white;">
+                <h5 class="modal-title">✎ Editar Despesa</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" id="editarDespesaForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Descrição</label>
+                        <input type="text" name="descricao" id="edit-descricao" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Categoria</label>
+                        <select name="categoria" id="edit-categoria" class="form-control" required>
+                            <option value="ração">Ração</option>
+                            <option value="saúde">Saúde</option>
+                            <option value="manutenção">Manutenção</option>
+                            <option value="energia">Energia</option>
+                            <option value="outros">Outros</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Valor (R$)</label>
+                        <input type="number" step="0.01" name="valor" id="edit-valor" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Data</label>
+                        <input type="date" name="data" id="edit-data" class="form-control" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var editModal = document.getElementById('editarDespesaModal');
+    editModal.addEventListener('show.bs.modal', function(event) {
+        var btn = event.relatedTarget;
+        document.getElementById('edit-descricao').value = btn.getAttribute('data-descricao');
+        document.getElementById('edit-categoria').value = btn.getAttribute('data-categoria');
+        document.getElementById('edit-valor').value = btn.getAttribute('data-valor');
+        document.getElementById('edit-data').value = btn.getAttribute('data-data');
+        document.getElementById('editarDespesaForm').action = '/financeiro/editar/' + btn.getAttribute('data-id');
+    });
+});
+</script>
 {% endblock %}
