@@ -27,7 +27,7 @@ def seed_producoes():
         litros = 22.0 + (i * 0.3)
         db.session.add(ProducaoLeite(
             litros=litros, data=d,
-            preco_venda=2.50, total_receber=litros * 2.50
+            preco_venda=2.20, total_receber=litros * 2.20
         ))
     print(f'Producoes de leite semeadas ({dias} dias)')
 
@@ -45,7 +45,7 @@ def seed_racoes():
 def seed_precos():
     if PrecoLeite.query.first():
         return
-    db.session.add(PrecoLeite(preco_litro=2.50, data_vigencia=date(2024, 1, 1)))
+    db.session.add(PrecoLeite(preco_litro=2.20, data_vigencia=date(2024, 1, 1)))
     print('Preco do leite semeado')
 
 def seed_despesas():
