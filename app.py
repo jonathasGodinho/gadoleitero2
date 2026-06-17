@@ -714,12 +714,14 @@ def relatorio_pdf():
         response.headers['Content-Type'] = 'text/html'
         return response
 
-@app.route('/relatorios/csv')
+@app.route('/relatorios/excel')
 @login_required
-def relatorio_csv():
-    import csv
-    from io import StringIO
+def relatorio_excel():
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     from datetime import datetime
+    from io import BytesIO
+    from decimal import Decimal
 
     data_ini = request.args.get('data_ini')
     data_fim = request.args.get('data_fim')
@@ -742,46 +744,97 @@ def relatorio_csv():
         Despesa.data >= data_ini_date, Despesa.data <= data_fim_date
     ).all()
 
-    si = StringIO()
-    cw = csv.writer(si)
-
-    # Resumo
     total_litros = sum(p.litros for p in producoes)
     custo_total = float(sum(c.custo for c in consumos)) + float(sum(d.valor for d in despesas))
     receita = sum(float(p.litros) * float(p.preco_venda if p.preco_venda else get_preco_vigente(p.data)) for p in producoes)
 
-    cw.writerow(['Terra Roxa System - Relatorio'])
-    cw.writerow([f'Periodo: {data_ini} a {data_fim}'])
-    cw.writerow([])
-    cw.writerow(['RESUMO EXECUTIVO'])
-    cw.writerow(['Metrica', 'Valor'])
-    cw.writerow(['Total Litros', f'{total_litros:.2f}'])
-    cw.writerow(['Receita Total', f'{receita:.2f}'])
-    cw.writerow(['Custo Total', f'{custo_total:.2f}'])
-    cw.writerow(['Lucro Liquido', f'{receita - custo_total:.2f}'])
-    cw.writerow([])
+    wb = Workbook()
+    header_font = Font(bold=True, color='FFFFFF', size=12)
+    header_fill = PatternFill(start_color='27AE60', end_color='27AE60', fill_type='solid')
+    thin_border = Border(
+        left=Side(style='thin'), right=Side(style='thin'),
+        top=Side(style='thin'), bottom=Side(style='thin'))
 
-    # Produção detalhada
-    cw.writerow(['PRODUCAO DETALHADA'])
-    cw.writerow(['Data', 'Animal', 'Litros', 'Preco/L', 'Valor'])
-    for p in producoes:
+    # --- Resumo ---
+    ws = wb.active
+    ws.title = 'Resumo'
+    ws.cell(1, 1, 'Terra Roxa System - Relatorio de Gestao').font = Font(bold=True, size=14, color='27AE60')
+    ws.merge_cells('A1:B1')
+    ws.cell(2, 1, f'Periodo: {data_ini} a {data_fim}')
+    ws.merge_cells('A2:B2')
+
+    headers = ['Metrica', 'Valor']
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(4, col, h)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center')
+        cell.border = thin_border
+
+    rows = [
+        ('Total Litros', f'{total_litros:.2f} L'),
+        ('Receita Total', f'R$ {receita:.2f}'),
+        ('Custo Total', f'R$ {custo_total:.2f}'),
+        ('Lucro Liquido', f'R$ {receita - custo_total:.2f}'),
+    ]
+    for i, (k, v) in enumerate(rows, 5):
+        ws.cell(i, 1, k).border = thin_border
+        ws.cell(i, 2, v).border = thin_border
+
+    # --- Producao ---
+    ws2 = wb.create_sheet('Producao')
+    headers2 = ['Data', 'Animal', 'Litros', 'Preco/L', 'Valor']
+    for col, h in enumerate(headers2, 1):
+        cell = ws2.cell(1, col, h)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center')
+        cell.border = thin_border
+
+    for i, p in enumerate(producoes, 2):
         prec = p.preco_venda if p.preco_venda else get_preco_vigente(p.data)
         nome = p.animal.nome if p.animal else 'Geral'
-        cw.writerow([p.data.isoformat(), nome, p.litros, prec, float(p.litros) * float(prec)])
-    cw.writerow([])
+        ws2.cell(i, 1, p.data.isoformat()).border = thin_border
+        ws2.cell(i, 2, nome).border = thin_border
+        ws2.cell(i, 3, float(p.litros)).border = thin_border
+        ws2.cell(i, 4, float(prec)).border = thin_border
+        ws2.cell(i, 5, round(float(p.litros) * float(prec), 2)).border = thin_border
 
-    # Custos
-    cw.writerow(['CUSTOS'])
-    cw.writerow(['Tipo', 'Data', 'Categoria/Descricao', 'Valor'])
+    # --- Custos ---
+    ws3 = wb.create_sheet('Custos')
+    headers3 = ['Tipo', 'Data', 'Categoria/Descricao', 'Valor']
+    for col, h in enumerate(headers3, 1):
+        cell = ws3.cell(1, col, h)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center')
+        cell.border = thin_border
+
+    i = 2
     for c in consumos:
-        cw.writerow(['Racao', c.data.isoformat(), c.tipo_racao.nome, c.custo])
+        ws3.cell(i, 1, 'Racao').border = thin_border
+        ws3.cell(i, 2, c.data.isoformat()).border = thin_border
+        ws3.cell(i, 3, c.tipo_racao.nome).border = thin_border
+        ws3.cell(i, 4, float(c.custo)).border = thin_border
+        i += 1
     for d in despesas:
-        cw.writerow(['Despesa', d.data.isoformat(), d.categoria or 'Geral', d.valor])
+        ws3.cell(i, 1, 'Despesa').border = thin_border
+        ws3.cell(i, 2, d.data.isoformat()).border = thin_border
+        ws3.cell(i, 3, d.categoria or 'Geral').border = thin_border
+        ws3.cell(i, 4, float(d.valor)).border = thin_border
+        i += 1
 
-    output = si.getvalue()
-    response = make_response(output)
-    response.headers['Content-Disposition'] = f'attachment; filename=relatorio_terra_roxa_{data_ini}_{data_fim}.csv'
-    response.headers['Content-Type'] = 'text/csv; charset=utf-8'
+    for ws_ in [ws, ws2, ws3]:
+        for col in range(1, 6):
+            letter = chr(64 + col)
+            ws_.column_dimensions[letter].width = 20
+
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    response = make_response(buffer.read())
+    response.headers['Content-Disposition'] = f'attachment; filename=relatorio_terra_roxa_{data_ini}_{data_fim}.xlsx'
+    response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     return response
 
 @app.route('/cooperativas')
