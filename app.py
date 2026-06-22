@@ -1729,7 +1729,15 @@ def auditoria():
 
 @app.route('/admin/backup')
 @login_required
-def backup():
+def backup_page():
+    if current_user.role != 'admin':
+        flash('Acesso restrito', 'danger')
+        return redirect(url_for('index'))
+    return render_template('backup.html')
+
+@app.route('/admin/backup/criar', methods=['POST'])
+@login_required
+def criar_backup():
     if current_user.role != 'admin':
         flash('Acesso restrito', 'danger')
         return redirect(url_for('index'))
@@ -1759,7 +1767,7 @@ def backup():
     
     log_auditoria('Backup realizado', f'Arquivo: {backup_name}')
     flash(f'Backup salvo em: {backup_name}', 'success')
-    return redirect(url_for('backup'))
+    return redirect(url_for('backup_page'))
 
 @app.route('/admin/backup/listar')
 @login_required
