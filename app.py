@@ -1757,11 +1757,9 @@ def backup():
     with open(filepath, 'w', encoding='utf-8') as f:
         json.dump(backup_data, f, ensure_ascii=False, indent=2, default=str)
     
-    response = make_response(json.dumps(backup_data, ensure_ascii=False, indent=2, default=str))
-    response.headers['Content-Disposition'] = f'attachment; filename={backup_name}'
-    response.headers['Content-Type'] = 'application/json'
     log_auditoria('Backup realizado', f'Arquivo: {backup_name}')
-    return response
+    flash(f'Backup salvo em: {backup_name}', 'success')
+    return redirect(url_for('backup'))
 
 @app.route('/admin/backup/listar')
 @login_required
