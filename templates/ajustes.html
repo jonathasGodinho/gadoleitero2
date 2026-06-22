@@ -95,6 +95,7 @@
             </div>
         </div>
 
+        {% if current_user.role in ['admin', 'gerente'] %}
         <div class="card mt-4">
             <div class="card-header bg-transparent">
                 <h5 class="mb-0">📦 Restaurar Backup</h5>
@@ -108,7 +109,7 @@
                             <option value="">-- Selecione um backup --</option>
                             {% for b in backups %}
                             <option value="{{ b.filename }}">
-                                {{ b.date.strftime('%d/%m/%Y %H:%M') }} - {{ b.filename }} ({{ b.size|filesizeformat }})
+                                {{ b.date.strftime('%d/%m/%Y %H:%M') }}
                             </option>
                             {% endfor %}
                         </select>
@@ -122,6 +123,7 @@
                 {% endif %}
             </div>
         </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
