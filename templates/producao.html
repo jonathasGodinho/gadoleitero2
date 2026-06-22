@@ -41,8 +41,6 @@
                     <input type="date" name="data_ini" class="form-control form-control-sm" value="{{ data_ini }}">
                     <input type="date" name="data_fim" class="form-control form-control-sm" value="{{ data_fim }}">
                     <button type="submit" class="btn btn-sm btn-outline-primary">Filtrar</button>
-                    <a href="{{ url_for('producao_exportar_pdf', data_ini=data_ini, data_fim=data_fim) }}" class="btn btn-sm btn-outline-danger">📄 PDF</a>
-                    <a href="{{ url_for('producao_exportar_excel', data_ini=data_ini, data_fim=data_fim) }}" class="btn btn-sm btn-outline-success">📊 Excel</a>
                     <a href="{{ url_for('relatorios') }}" class="btn btn-sm btn-outline-secondary">📊 Relatórios</a>
                 </form>
             </div>
