@@ -67,3 +67,79 @@ def _rotate_backups():
     backups = sorted(BACKUP_DIR.glob('backup_terra_roxa_*.json'), reverse=True)
     for f in backups[MAX_BACKUPS:]:
         f.unlink()
+
+def restore_backup(filename):
+    from sqlalchemy import DateTime, Date, Numeric, Boolean
+    filepath = BACKUP_DIR / filename
+    if not filepath.exists():
+        raise FileNotFoundError(f'Backup {filename} nao encontrado')
+
+    with open(filepath, 'r', encoding='utf-8') as f:
+        backup_data = json.load(f)
+
+    from app import db
+    table_order = [
+        'user', 'animal', 'tipo_racao', 'preco_leite', 'cliente',
+        'producao_leite', 'consumo_racao', 'despesa', 'orcamento',
+        'venda_avulsa', 'saude_animal', 'audit_log',
+    ]
+
+    def parse_value(val, col):
+        if val is None:
+            return None
+        col_type = col.type
+        if isinstance(col_type, DateTime):
+            if isinstance(val, str):
+                for fmt in ['%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S']:
+                    try:
+                        return datetime.strptime(val, fmt)
+                    except:
+                        pass
+            return val
+        if isinstance(col_type, Date):
+            if isinstance(val, str):
+                return datetime.strptime(val, '%Y-%m-%d').date()
+            return val
+        if isinstance(col_type, Boolean):
+            if isinstance(val, str):
+                return val.lower() in ('true', '1', 'yes')
+            return bool(val)
+        if isinstance(col_type, Numeric):
+            if isinstance(val, str):
+                return float(val)
+            return val
+        return val
+
+    conn = db.engine.connect()
+    trans = conn.begin()
+    try:
+        for table_name in reversed(table_order):
+            table = db.metadata.tables.get(table_name)
+            if table is not None:
+                conn.execute(table.delete())
+
+        total = 0
+        for table_name in table_order:
+            rows = backup_data.get(table_name, [])
+            if not rows:
+                continue
+            table = db.metadata.tables.get(table_name)
+            if table is None:
+                continue
+            for row in rows:
+                parsed = {}
+                for k, v in row.items():
+                    if k in table.columns:
+                        parsed[k] = parse_value(v, table.columns[k])
+                    else:
+                        parsed[k] = v
+                conn.execute(table.insert().values(parsed))
+            total += len(rows)
+
+        trans.commit()
+        conn.close()
+        return total
+    except Exception as e:
+        trans.rollback()
+        conn.close()
+        raise e

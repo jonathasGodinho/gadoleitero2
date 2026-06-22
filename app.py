@@ -1610,7 +1610,9 @@ def orcamento():
 @login_required
 def ajustes():
     precos = PrecoLeite.query.order_by(PrecoLeite.data_vigencia.desc()).all()
-    return render_template('ajustes.html', precos=precos)
+    from backup_util import list_backups
+    backups = list_backups()
+    return render_template('ajustes.html', precos=precos, backups=backups)
 
 @app.route('/ajustes/preco', methods=['POST'])
 @login_required
@@ -1786,6 +1788,33 @@ def download_backup(filename):
         flash('Arquivo nao encontrado', 'danger')
         return redirect(url_for('backup'))
     return send_file(str(filepath), as_attachment=True, download_name=filename)
+
+@app.route('/ajustes/restaurar', methods=['POST'])
+@login_required
+def restaurar_backup():
+    if current_user.role not in ['admin', 'gerente']:
+        flash('Acesso restrito', 'danger')
+        return redirect(url_for('ajustes'))
+
+    filename = request.form.get('filename')
+    if not filename:
+        flash('Nenhum arquivo selecionado', 'danger')
+        return redirect(url_for('ajustes'))
+
+    from backup_util import restore_backup, BACKUP_DIR
+    filepath = BACKUP_DIR / filename
+    if not filepath.exists():
+        flash('Arquivo de backup nao encontrado', 'danger')
+        return redirect(url_for('ajustes'))
+
+    try:
+        total = restore_backup(filename)
+        log_auditoria('Backup restaurado', f'Arquivo: {filename} ({total} registros)')
+        flash(f'Backup restaurado com sucesso! {total} registros recuperados.', 'success')
+    except Exception as e:
+        flash(f'Erro ao restaurar backup: {str(e)}', 'danger')
+
+    return redirect(url_for('ajustes'))
 
 # ========== VENDAS AVULSAS ==========
 
