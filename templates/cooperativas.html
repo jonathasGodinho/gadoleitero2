@@ -1,18 +1,14 @@
 {% extends "base.html" %}
 {% block title %}Cooperativas - Terra Roxa System{% endblock %}
+{% block page_title %}🚛 Cooperativas de Leite{% endblock %}
 {% block content %}
 <div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <h2 style="color: #2C3E50;" class="mb-4">🚛 Cooperativas de Leite</h2>
-        </div>
-    </div>
 
     <div class="row g-4">
         {% for coop in cooperativas %}
         <div class="col-md-6">
             <div class="card h-100">
-                <div class="card-header" style="background-color: #27AE60; color: white;">
+                <div class="card-header" style="background: linear-gradient(135deg, var(--navy-dark) 0%, var(--dark-green) 100%); color: white;">
                     <h5 class="mb-0">{{ coop.nome }}</h5>
                 </div>
                 <div class="card-body">
@@ -23,7 +19,7 @@
                     <p><strong>📍 Distância:</strong> {{ coop.distancia_km }} km</p>
                 </div>
                 <div class="card-footer">
-                    <button class="btn btn-success w-100">📞 Solicitar Coleta</button>
+                    <button class="btn btn-primary w-100">📞 Solicitar Coleta</button>
                 </div>
             </div>
         </div>

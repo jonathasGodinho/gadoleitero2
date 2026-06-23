@@ -1,41 +1,37 @@
 {% extends "base.html" %}
 {% block title %}Orçamento - Terra Roxa System{% endblock %}
+{% block page_title %}📊 Orçamento Anual{% endblock %}
 {% block content %}
 <div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2 style="color: #2C3E50;">📊 Orçamento Anual</h2>
-                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#novoOrcamentoModal">
-                    ➕ Novo Orçamento
-                </button>
-            </div>
-        </div>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#novoOrcamentoModal">
+            ➕ Novo Orçamento
+        </button>
     </div>
 
     <!-- Resumo -->
-    <div class="row mb-4">
+    <div class="row g-3 g-md-4 mb-4">
         <div class="col-md-4">
-            <div class="card bg-primary text-white">
+            <div class="card card-metric" style="background: linear-gradient(135deg, #3498DB 0%, #2980B9 100%);">
                 <div class="card-body">
-                    <h6 class="card-title">Total Previsto</h6>
-                    <h3>R$ {{ "%.2f"|format(total_previsto) }}</h3>
+                    <h6 class="opacity-75">Total Previsto</h6>
+                    <h2 class="h3">R$ {{ "%.2f"|format(total_previsto) }}</h2>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="card bg-success text-white">
+            <div class="card card-metric" style="background: linear-gradient(135deg, var(--dark-green) 0%, var(--darker-green) 100%);">
                 <div class="card-body">
-                    <h6 class="card-title">Total Realizado</h6>
-                    <h3>R$ {{ "%.2f"|format(total_realizado) }}</h3>
+                    <h6 class="opacity-75">Total Realizado</h6>
+                    <h2 class="h3">R$ {{ "%.2f"|format(total_realizado) }}</h2>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="card bg-info text-white">
+            <div class="card card-metric" style="background: linear-gradient(135deg, var(--harvest-gold) 0%, #E67E22 100%);">
                 <div class="card-body">
-                    <h6 class="card-title">Diferença</h6>
-                    <h3>R$ {{ "%.2f"|format(total_realizado - total_previsto) }}</h3>
+                    <h6 class="opacity-75">Diferença</h6>
+                    <h2 class="h3">R$ {{ "%.2f"|format(total_realizado - total_previsto) }}</h2>
                 </div>
             </div>
         </div>
@@ -43,8 +39,9 @@
 
     <!-- Tabela de Orçamentos -->
     <div class="card">
-        <div class="card-header" style="background-color: #2C3E50; color: white;">
-            <h5 class="mb-0">📋 Orçamentos por Categoria</h5>
+        <div class="card-header bg-transparent d-flex align-items-center gap-2" style="border-bottom: 2px solid var(--border-light);">
+            <span style="font-size: 1.2rem;">📋</span>
+            <h5 class="mb-0" style="font-size: 1rem; font-weight: 600;">Orçamentos por Categoria</h5>
         </div>
         <div class="card-body">
             {% if orcamentos %}
@@ -66,7 +63,7 @@
                         <tr>
                             <td>{{ o.ano }}</td>
                             <td>{{ o.mes }}</td>
-                            <td><span class="badge bg-info">{{ o.categoria }}</span></td>
+                            <td><span class="badge" style="background: var(--success-light); color: var(--dark-green);">{{ o.categoria }}</span></td>
                             <td>R$ {{ "%.2f"|format(o.valor_previsto) }}</td>
                             <td>R$ {{ "%.2f"|format(o.valor_realizado) }}</td>
                             <td>
@@ -76,7 +73,7 @@
                                 </span>
                             </td>
                             <td>
-                                <button class="btn btn-sm btn-danger">Excluir</button>
+                                <a href="/orcamento/excluir/{{ o.id }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Excluir este orçamento?')">✕</a>
                             </td>
                         </tr>
                         {% endfor %}
@@ -94,7 +91,7 @@
 <div class="modal fade" id="novoOrcamentoModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header" style="background-color: #27AE60; color: white;">
+            <div class="modal-header" style="background: linear-gradient(135deg, var(--navy-dark) 0%, var(--dark-green) 100%); color: white;">
                 <h5 class="modal-title">➕ Novo Orçamento</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
@@ -106,7 +103,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Mês</label>
-                        <select name="mes" class="form-control" required>
+                        <select name="mes" class="form-select" required>
                             <option value="1">Janeiro</option>
                             <option value="2">Fevereiro</option>
                             <option value="3">Março</option>
@@ -123,7 +120,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Categoria</label>
-                        <select name="categoria" class="form-control" required>
+                        <select name="categoria" class="form-select" required>
                             <option value="ração">Ração</option>
                             <option value="saúde">Saúde</option>
                             <option value="manutenção">Manutenção</option>
@@ -143,7 +140,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-success">Salvar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
                 </div>
             </form>
         </div>

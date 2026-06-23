@@ -1329,6 +1329,17 @@ def saude_animal(id):
     from datetime import date
     return render_template('saude_animal.html', animal=animal, registros=registros, today=date.today())
 
+@app.route('/saude/excluir/<int:id>')
+@login_required
+def excluir_saude(id):
+    registro = SaudeAnimal.query.get_or_404(id)
+    animal_id = registro.animal_id
+    db.session.delete(registro)
+    db.session.commit()
+    log_auditoria('Registro saúde excluído', f'ID {id}')
+    flash('Registro de saúde excluído!', 'success')
+    return redirect(url_for('saude_animal', id=animal_id))
+
 # ========== RELATÓRIOS ==========
 @app.route('/relatorios')
 @login_required
@@ -1605,6 +1616,16 @@ def orcamento():
                          total_previsto=total_previsto,
                          total_realizado=total_realizado,
                          today=date.today())
+
+@app.route('/orcamento/excluir/<int:id>')
+@login_required
+def excluir_orcamento(id):
+    orcamento = Orcamento.query.get_or_404(id)
+    db.session.delete(orcamento)
+    db.session.commit()
+    log_auditoria('Orçamento excluído', f'{orcamento.categoria} - {orcamento.mes}/{orcamento.ano}')
+    flash('Orçamento excluído!', 'success')
+    return redirect(url_for('orcamento'))
 
 @app.route('/ajustes')
 @login_required

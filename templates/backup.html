@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% block title %}Backup - Terra Roxa System{% endblock %}
-{% block page_title %}Backup do Sistema{% endblock %}
+{% block page_title %}💾 Backup do Sistema{% endblock %}
 
 {% block content %}
 <div class="row g-4">
     <div class="col-md-6">
         <div class="card h-100">
             <div class="card-header bg-transparent">
-                <h5 class="mb-0">Criar Backup</h5>
+                <h5 class="mb-0">📦 Criar Backup</h5>
             </div>
             <div class="card-body d-flex flex-column">
                 <p class="card-text">Gera um arquivo JSON com todos os registros do banco e salva na pasta de backups. Você pode baixá-lo ou restaurá-lo depois em Ajustes.</p>
@@ -22,12 +22,12 @@
     <div class="col-md-6">
         <div class="card h-100">
             <div class="card-header bg-transparent">
-                <h5 class="mb-0">Backup Automatico</h5>
+                <h5 class="mb-0">🔄 Backup Automático</h5>
             </div>
             <div class="card-body d-flex flex-column">
-                <p class="card-text">O sistema faz backup automatico todos os dias ao iniciar. Os ultimos 30 backups sao mantidos.</p>
+                <p class="card-text">O sistema faz backup automático todos os dias ao iniciar. Os últimos 30 backups são mantidos.</p>
                 <div class="mt-auto">
-                    <small class="text-muted">Ultimo backup: <span id="ultimo-backup">carregando...</span></small>
+                    <small class="text-muted">Último backup: <span id="ultimo-backup">carregando...</span></small>
                 </div>
             </div>
         </div>
@@ -35,7 +35,7 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header bg-transparent">
-                <h5 class="mb-0">Backups Disponiveis</h5>
+                <h5 class="mb-0">📂 Backups Disponíveis</h5>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -45,7 +45,7 @@
                                 <th>Arquivo</th>
                                 <th>Tamanho</th>
                                 <th>Data</th>
-                                <th>Acao</th>
+                                <th>Ação</th>
                             </tr>
                         </thead>
                         <tbody id="lista-backups">

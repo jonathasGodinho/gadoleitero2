@@ -5,51 +5,134 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registro - Terra Roxa System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary-green: #2ECC71;
+            --dark-green: #27AE60;
+            --darker-green: #1E8449;
+            --accent-emerald: #40A190;
+            --navy-dark: #2C3E50;
+            --bg-card: #FFFFFF;
+            --text-primary: #2D3436;
+            --shadow-md: 0 4px 16px rgba(39, 174, 96, 0.12);
+            --radius-md: 12px;
+            --radius-sm: 8px;
+        }
         body {
             font-family: 'Nunito', sans-serif;
-            background: linear-gradient(rgba(39, 174, 96, 0.85), rgba(30, 132, 73, 0.85)), 
-                        url('https://images.unsplash.com/photo-1500595046743-cd271d694d30?w=1920&q=80');
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
+            background: linear-gradient(135deg, #2C3E50 0%, #27AE60 50%, #1E8449 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+            margin: 0;
+            padding: 20px;
+        }
+        body.dark-mode {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #1E8449 100%);
         }
         .login-card {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-            backdrop-filter: blur(10px);
+            background: var(--bg-card);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-md);
             width: 100%;
-            max-width: 400px;
+            max-width: 420px;
+            overflow: hidden;
+            border: 1px solid rgba(39, 174, 96, 0.1);
+        }
+        body.dark-mode .login-card {
+            background: #16213e;
+            border-color: #2C3E50;
         }
         .login-card .card-body {
+            padding: 2.5rem 2rem;
+        }
+        .login-header {
+            background: linear-gradient(135deg, var(--navy-dark) 0%, var(--dark-green) 100%);
             padding: 2rem;
+            text-align: center;
+            color: white;
+        }
+        .login-header h4 {
+            font-weight: 700;
+            margin: 0;
+        }
+        .login-header small {
+            opacity: 0.8;
         }
         .btn-primary {
-            background-color: #27AE60;
-            border-color: #27AE60;
+            background: linear-gradient(135deg, var(--dark-green) 0%, var(--accent-emerald) 100%);
+            border: none;
+            border-radius: var(--radius-sm);
+            padding: 10px 24px;
+            font-weight: 700;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
         }
         .btn-primary:hover {
-            background-color: #1E8449;
-            border-color: #1E8449;
+            background: linear-gradient(135deg, var(--darker-green) 0%, var(--dark-green) 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
         }
         .form-control:focus {
-            border-color: #27AE60;
+            border-color: var(--dark-green);
             box-shadow: 0 0 0 0.2rem rgba(39, 174, 96, 0.25);
+        }
+        body.dark-mode .form-control {
+            background: #1a1a2e;
+            border-color: #2C3E50;
+            color: #E8F5E9;
+        }
+        body.dark-mode .form-control:focus {
+            background: #1a1a2e;
+            border-color: var(--dark-green);
+            color: #E8F5E9;
+        }
+        body.dark-mode .form-label {
+            color: #B0BEC5 !important;
+        }
+        body.dark-mode .text-muted {
+            color: #B0BEC5 !important;
+        }
+        .dark-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.3rem;
+            transition: all 0.2s ease;
+            z-index: 1000;
+        }
+        .dark-toggle:hover {
+            background: rgba(255,255,255,0.25);
+            transform: scale(1.1);
+        }
+        .password-feedback {
+            font-size: 0.8rem;
+            margin-top: 4px;
         }
     </style>
 </head>
 <body>
+    <button class="dark-toggle" id="darkToggle" title="Alternar modo escuro">🌙</button>
     <div class="login-card">
+        <div class="login-header">
+            <img src="/static/logo.png" alt="Terra Roxa" class="img-fluid mb-2" style="max-height: 80px;">
+            <h4>Terra Roxa System</h4>
+            <small>Crie sua conta</small>
+        </div>
         <div class="card-body">
-            <div class="text-center mb-4">
-                <h3 style="color: #2C3E50;">🐄 Terra Roxa System</h3>
-                <small class="text-muted">Preencha os dados abaixo</small>
-            </div>
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     {% for category, message in messages %}
@@ -60,20 +143,25 @@
                     {% endfor %}
                 {% endif %}
             {% endwith %}
-            <form method="POST">
+            <form method="POST" id="registerForm">
                 <div class="mb-3">
-                    <label class="form-label" style="color: #2D3436;">Nome</label>
+                    <label class="form-label" style="color: var(--text-primary); font-weight: 600;">Nome</label>
                     <input type="text" name="nome" class="form-control" required>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label" style="color: #2D3436;">Email</label>
+                    <label class="form-label" style="color: var(--text-primary); font-weight: 600;">Email</label>
                     <input type="email" name="email" class="form-control" required>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label" style="color: #2D3436;">Senha</label>
-                    <input type="password" name="senha" class="form-control" required>
+                    <label class="form-label" style="color: var(--text-primary); font-weight: 600;">Senha</label>
+                    <input type="password" name="senha" id="senha" class="form-control" required minlength="6">
                 </div>
-                <button type="submit" class="btn btn-primary w-100 mb-3">Criar Conta</button>
+                <div class="mb-3">
+                    <label class="form-label" style="color: var(--text-primary); font-weight: 600;">Confirmar Senha</label>
+                    <input type="password" id="confirmar_senha" class="form-control" required minlength="6">
+                    <div id="senhaFeedback" class="password-feedback text-danger d-none">As senhas não conferem</div>
+                </div>
+                <button type="submit" class="btn btn-primary w-100 mb-3" id="btnSubmit">Criar Conta</button>
             </form>
             <div class="text-center">
                 <a href="/login" class="text-muted small">Já tem conta? Entrar</a>
@@ -81,5 +169,37 @@
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.getElementById('darkToggle').addEventListener('click', function() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('loginDarkMode', isDark);
+            this.textContent = isDark ? '☀️' : '🌙';
+        });
+        if (localStorage.getItem('loginDarkMode') === 'true') {
+            document.body.classList.add('dark-mode');
+            document.getElementById('darkToggle').textContent = '☀️';
+        }
+        document.getElementById('registerForm').addEventListener('submit', function(e) {
+            const senha = document.getElementById('senha').value;
+            const confirmar = document.getElementById('confirmar_senha').value;
+            const feedback = document.getElementById('senhaFeedback');
+            if (senha !== confirmar) {
+                e.preventDefault();
+                feedback.classList.remove('d-none');
+            } else {
+                feedback.classList.add('d-none');
+            }
+        });
+        document.getElementById('confirmar_senha').addEventListener('input', function() {
+            const senha = document.getElementById('senha').value;
+            const feedback = document.getElementById('senhaFeedback');
+            if (this.value && senha !== this.value) {
+                feedback.classList.remove('d-none');
+            } else {
+                feedback.classList.add('d-none');
+            }
+        });
+    </script>
 </body>
 </html>

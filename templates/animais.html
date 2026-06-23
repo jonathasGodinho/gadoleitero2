@@ -21,12 +21,12 @@
                     <input type="text" name="raca" class="form-control" placeholder="Ex: Holandesa, Nelore, etc.">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Filhote</label>
-                    <input type="text" name="lote" class="form-control" placeholder="Ex: Filhote A">
+                    <label class="form-label">Lote</label>
+                    <input type="text" name="lote" class="form-control" placeholder="Ex: Lote A">
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Sexo</label>
-                    <select name="sexo" class="form-control" required>
+                                                    <select name="sexo" class="form-select" required>
                         <option value="">Selecione...</option>
                         <option value="macho">♂️ Macho</option>
                         <option value="femea">♀️ Fêmea</option>
@@ -54,7 +54,7 @@
                                 <th>Brinco</th>
                                 <th>Nome</th>
                             <th>Raça</th>
-                            <th>Filhote</th>
+                            <th>Lote</th>
                             <th>Sexo</th>
                                 <th>Status</th>
                                 <th>Ações</th>
@@ -104,7 +104,7 @@
                                                 </div>
                                                 <div class="mb-2">
                                                     <label class="form-label">Raça</label>
-                                                    <select name="raca" class="form-control">
+                                                    <select name="raca" class="form-select">
                                                         <option value="">Selecione...</option>
                                                         <option value="Holandesa" {% if animal.raca == 'Holandesa' %}selected{% endif %}>Holandesa (Leiteira)</option>
                                                         <option value="Jersey" {% if animal.raca == 'Jersey' %}selected{% endif %}>Jersey (Leiteira)</option>
@@ -117,15 +117,15 @@
                                                 </div>
                                                 <div class="mb-2">
                                                     <label class="form-label">Sexo</label>
-                                                    <select name="sexo" class="form-control" required>
+                    <select name="sexo" class="form-select" required>
                                                         <option value="">Selecione...</option>
                                                         <option value="macho" {% if animal.sexo == 'macho' %}selected{% endif %}>♂️ Macho</option>
                                                         <option value="femea" {% if animal.sexo == 'femea' %}selected{% endif %}>♀️ Fêmea</option>
                                                     </select>
                                                 </div>
                                                 <div class="mb-2">
-                                                    <label class="form-label">Filhote</label>
-                                                    <input type="text" name="lote" class="form-control" value="{{ animal.lote or '' }}" placeholder="Ex: Filhote A">
+                                                    <label class="form-label">Lote</label>
+                                                    <input type="text" name="lote" class="form-control" value="{{ animal.lote or '' }}" placeholder="Ex: Lote A">
                                                 </div>
                                                 <div class="form-check">
                                                     <input class="form-check-input" type="checkbox" name="ativo" id="ativo{{ animal.id }}" {% if animal.ativo %}checked{% endif %}>
