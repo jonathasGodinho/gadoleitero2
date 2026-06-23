@@ -202,7 +202,7 @@
         <div class="card">
             <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">📊 Custo Mensal</h5>
-                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#comparativoModal">🍕 Pizza</button>
+                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#comparativoModal">📊 Comparativo</button>
             </div>
             <div class="card-body">
                 <canvas id="chartCustoMensal"></canvas>
@@ -239,19 +239,23 @@
 </div>
 {% endif %}
 
-<!-- Modal Custo por Mês -->
+<!-- Modal Comparativo Mensal -->
 <div class="modal fade" id="comparativoModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header" style="background: linear-gradient(135deg, var(--navy-dark) 0%, var(--dark-green) 100%); color: white;">
-                <h5 class="modal-title">📊 Custo por Mês</h5>
+                <h5 class="modal-title">📊 Comparativo Mensal</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body text-center">
-                <canvas id="chartCustoPizzaMensal" height="120"></canvas>
+            <div class="modal-body">
+                <canvas id="chartComparativoModal" height="130"></canvas>
             </div>
             <div class="modal-footer d-flex justify-content-between">
-                <div class="text-muted small">Distribuição percentual do custo total por mês</div>
+                <div class="d-flex gap-3 small">
+                    <span><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#27AE60;"></span> Produção (L)</span>
+                    <span><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#F39C12;"></span> Custo (R$)</span>
+                    <span><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#3498DB;"></span> Lucro (R$)</span>
+                </div>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
             </div>
         </div>
@@ -406,36 +410,57 @@ new Chart(document.getElementById('chartCustoLiteroRel').getContext('2d'), {
     }
 });
 }
-// Custo por Mês - Gráfico de Pizza no Modal
+// Comparativo Mensal - Barras Agrupadas (Produção, Custo, Lucro)
 if ({{ meses_labels|length }} > 0) {
-const coresPizza = ['#E74C3C', '#3498DB', '#2ECC71', '#F1C40F', '#9B59B6', '#1ABC9C', '#E67E22', '#2C3E50', '#27AE60', '#8E44AD', '#D35400', '#16A085'];
-new Chart(document.getElementById('chartCustoPizzaMensal').getContext('2d'), {
-    type: 'pie',
+new Chart(document.getElementById('chartComparativoModal').getContext('2d'), {
+    type: 'bar',
     data: {
         labels: {{ meses_labels|tojson }},
         datasets: [{
+            label: 'Produção (L)',
+            data: {{ valores_mensais|tojson }},
+            backgroundColor: 'rgba(39, 174, 96, 0.85)',
+            borderColor: '#27AE60',
+            borderWidth: 1,
+            borderRadius: 4
+        }, {
+            label: 'Custo (R$)',
             data: {{ custo_mensal|tojson }},
-            backgroundColor: coresPizza.slice(0, {{ meses_labels|length }}),
-            borderWidth: 2,
-            borderColor: '#fff'
+            backgroundColor: 'rgba(241, 196, 15, 0.85)',
+            borderColor: '#F1C40F',
+            borderWidth: 1,
+            borderRadius: 4
+        }, {
+            label: 'Lucro (R$)',
+            data: {{ lucro_mensal|tojson }},
+            backgroundColor: 'rgba(52, 152, 219, 0.85)',
+            borderColor: '#3498DB',
+            borderWidth: 1,
+            borderRadius: 4
         }]
     },
     options: {
         responsive: true,
         maintainAspectRatio: true,
         plugins: {
-            legend: { position: 'bottom', labels: { padding: 20, font: { size: 13 } } },
+            legend: { display: false },
             tooltip: {
                 backgroundColor: 'rgba(44, 62, 80, 0.9)',
                 padding: 12,
                 cornerRadius: 8,
-                callbacks: {
-                    label: function(context) {
-                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                        const pct = ((context.parsed / total) * 100).toFixed(1);
-                        return ' R$ ' + context.parsed.toFixed(2) + ' (' + pct + '%)';
-                    }
-                }
+                mode: 'index',
+                intersect: false
+            }
+        },
+        scales: {
+            x: {
+                grid: { display: false },
+                ticks: { font: { size: 11 } }
+            },
+            y: {
+                beginAtZero: true,
+                grid: { color: 'rgba(0,0,0,0.06)' },
+                ticks: { font: { size: 11 } }
             }
         }
     }
