@@ -267,85 +267,202 @@
 <script>
 {% if tipo == 'vendas-avulsas' %}
 new Chart(document.getElementById('chartVendas').getContext('2d'), {
-    type: 'pie',
+    type: 'bar',
     data: {
         labels: {{ dias_grafico|tojson }},
         datasets: [{
             label: 'Vendas (R$)',
             data: {{ valores_venda|tojson }},
-            backgroundColor: ['#8E44AD', '#9B59B6', '#AF7AC5', '#BB8FCE', '#C39BD3', '#D2B4DE', '#E8DAEF', '#7FB3D8', '#85C1E9', '#AED6F1', '#D6EAF8', '#76D7C4', '#A3E4D7', '#ABEBC6', '#A9DFBF', '#F9E79F', '#FAD7A0', '#F5B041', '#EB984E', '#E59866', '#DC7633', '#CA6F1E', '#BA4A00', '#A04000', '#6E2C00', '#1A5276', '#1F618D', '#2E86C1', '#3498DB', '#5DADE2']
+            backgroundColor: ['#8E44AD', '#9B59B6', '#AF7AC5', '#BB8FCE', '#C39BD3', '#D2B4DE', '#E8DAEF', '#7FB3D8', '#85C1E9', '#AED6F1', '#D6EAF8', '#76D7C4', '#A3E4D7', '#ABEBC6', '#A9DFBF', '#F9E79F', '#FAD7A0', '#F5B041', '#EB984E', '#E59866', '#DC7633', '#CA6F1E', '#BA4A00', '#A04000', '#6E2C00', '#1A5276', '#1F618D', '#2E86C1', '#3498DB', '#5DADE2'],
+            borderRadius: 4,
+            borderSkipped: false
         }]
     },
-    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                backgroundColor: 'rgba(44, 62, 80, 0.9)',
+                padding: 12,
+                cornerRadius: 8,
+                callbacks: {
+                    label: function(context) { return 'R$ ' + context.parsed.y.toFixed(2); }
+                }
+            }
+        },
+        scales: {
+            y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 } } },
+            x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+        }
+    }
 });
 
 if ({{ meses_labels_vendas|length }} > 0) {
 new Chart(document.getElementById('chartVendasMensal').getContext('2d'), {
-    type: 'pie',
+    type: 'bar',
     data: {
         labels: {{ meses_labels_vendas|tojson }},
         datasets: [{
             label: 'Vendas (R$)',
             data: {{ valores_vendas_mensais|tojson }},
-            backgroundColor: ['#8E44AD', '#2E86C1', '#27AE60', '#F39C12', '#E74C3C', '#1ABC9C', '#9B59B6', '#3498DB', '#2ECC71', '#F1C40F', '#E67E22', '#1F618D']
+            backgroundColor: ['#8E44AD', '#2E86C1', '#27AE60', '#F39C12', '#E74C3C', '#1ABC9C', '#9B59B6', '#3498DB', '#2ECC71', '#F1C40F', '#E67E22', '#1F618D'],
+            borderRadius: 4,
+            borderSkipped: false
         }]
     },
-    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                backgroundColor: 'rgba(44, 62, 80, 0.9)',
+                padding: 12,
+                cornerRadius: 8,
+                callbacks: {
+                    label: function(context) { return 'R$ ' + context.parsed.y.toFixed(2); }
+                }
+            }
+        },
+        scales: {
+            y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 } } },
+            x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+        }
+    }
 });
 }
 {% else %}
 new Chart(document.getElementById('chartCusto').getContext('2d'), {
-    type: 'pie',
+    type: 'bar',
     data: {
         labels: {{ custo_por_tipo.keys()|list|tojson }},
         datasets: [{
+            label: 'Custo (R$)',
             data: {{ custo_por_tipo.values()|list|tojson }},
-            backgroundColor: ['#2C3E50', '#27AE60', '#1E8449', '#6E4F32', '#F1C40F']
+            backgroundColor: ['#2C3E50', '#27AE60', '#1E8449', '#6E4F32', '#F1C40F'],
+            borderColor: ['#2C3E50', '#27AE60', '#1E8449', '#6E4F32', '#F1C40F'],
+            borderWidth: 1,
+            borderRadius: 4
         }]
     },
-    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+    options: {
+        responsive: true,
+        indexAxis: 'y',
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                backgroundColor: 'rgba(44, 62, 80, 0.9)',
+                padding: 12,
+                cornerRadius: 8,
+                callbacks: {
+                    label: function(context) { return 'R$ ' + context.parsed.x.toFixed(2); }
+                }
+            }
+        },
+        scales: {
+            x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 } } },
+            y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+        }
+    }
 });
 
 const coresMensais = ['#8E44AD', '#2E86C1', '#27AE60', '#F39C12', '#E74C3C', '#1ABC9C', '#9B59B6', '#3498DB', '#2ECC71', '#F1C40F', '#E67E22', '#1F618D'];
 
 if ({{ meses_labels|length }} > 0) {
 new Chart(document.getElementById('chartMensal').getContext('2d'), {
-    type: 'pie',
+    type: 'bar',
     data: {
         labels: {{ meses_labels|tojson }},
         datasets: [{
             label: 'Litros',
             data: {{ valores_mensais|tojson }},
-            backgroundColor: coresMensais.slice(0, {{ meses_labels|length }})
+            backgroundColor: coresMensais.slice(0, {{ meses_labels|length }}),
+            borderRadius: 4,
+            borderSkipped: false
         }]
     },
-    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                backgroundColor: 'rgba(44, 62, 80, 0.9)',
+                padding: 12,
+                cornerRadius: 8,
+                callbacks: {
+                    label: function(context) { return '🥛 ' + context.parsed.y.toFixed(0) + ' L'; }
+                }
+            }
+        },
+        scales: {
+            y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 } } },
+            x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+        }
+    }
 });
 
 new Chart(document.getElementById('chartCustoMensal').getContext('2d'), {
-    type: 'pie',
+    type: 'bar',
     data: {
         labels: {{ meses_labels|tojson }},
         datasets: [{
             label: 'Custo (R$)',
             data: {{ custo_mensal|tojson }},
-            backgroundColor: coresMensais.slice(0, {{ meses_labels|length }})
+            backgroundColor: ['#F39C12', '#E67E22', '#D35400', '#F1C40F', '#F5B041', '#EB984E', '#E59866', '#DC7633', '#CA6F1E', '#BA4A00', '#A04000', '#873600'].slice(0, {{ meses_labels|length }}),
+            borderRadius: 4,
+            borderSkipped: false
         }]
     },
-    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                backgroundColor: 'rgba(44, 62, 80, 0.9)',
+                padding: 12,
+                cornerRadius: 8,
+                callbacks: {
+                    label: function(context) { return '💰 R$ ' + context.parsed.y.toFixed(2); }
+                }
+            }
+        },
+        scales: {
+            y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 } } },
+            x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+        }
+    }
 });
 
 new Chart(document.getElementById('chartLucroMensal').getContext('2d'), {
-    type: 'pie',
+    type: 'bar',
     data: {
         labels: {{ meses_labels|tojson }},
         datasets: [{
             label: 'Lucro (R$)',
             data: {{ lucro_mensal|tojson }},
-            backgroundColor: coresMensais.slice(0, {{ meses_labels|length }})
+            backgroundColor: ['#3498DB', '#2E86C1', '#2874A6', '#1F618D', '#1A5276', '#154360', '#85C1E9', '#5DADE2', '#48C9B0', '#1ABC9C', '#17A589', '#148F77'].slice(0, {{ meses_labels|length }}),
+            borderRadius: 4,
+            borderSkipped: false
         }]
     },
-    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                backgroundColor: 'rgba(44, 62, 80, 0.9)',
+                padding: 12,
+                cornerRadius: 8,
+                callbacks: {
+                    label: function(context) { return '📈 R$ ' + context.parsed.y.toFixed(2); }
+                }
+            }
+        },
+        scales: {
+            y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 } } },
+            x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+        }
+    }
 });
 }
 
