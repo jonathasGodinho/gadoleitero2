@@ -76,23 +76,14 @@
 </div>
 
 <div class="row g-4">
-    <div class="col-12 col-md-6">
+    <div class="col-12">
         <div class="card">
             <div class="card-header bg-transparent">
-                <h5 class="mb-0">📊 Vendas por Dia</h5>
+                <h5 class="mb-0">📊 Vendas por Período</h5>
             </div>
             <div class="card-body">
-                <canvas id="chartVendas"></canvas>
-            </div>
-        </div>
-    </div>
-    <div class="col-12 col-md-6">
-        <div class="card">
-            <div class="card-header bg-transparent">
-                <h5 class="mb-0">📊 Vendas Mensais</h5>
-            </div>
-            <div class="card-body">
-                <canvas id="chartVendasMensal"></canvas>
+                <canvas id="chartVendasUnico" height="120"></canvas>
+                <div id="vendas-legend" class="d-flex justify-content-center flex-wrap gap-3 mt-3 small"></div>
             </div>
         </div>
     </div>
@@ -174,106 +165,39 @@
     </div>
 </div>
 
-<div class="row g-4">
-    <div class="col-12 col-md-4">
-        <div class="card">
-            <div class="card-header bg-transparent">
-                <h5 class="mb-0">📊 Custo por Tipo de Ração</h5>
-            </div>
-            <div class="card-body">
-                <canvas id="chartCusto"></canvas>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="row g-4 mt-2">
-    <div class="col-12 col-md-6">
-        <div class="card">
-            <div class="card-header bg-transparent">
-                <h5 class="mb-0">📊 Produção Mensal</h5>
-            </div>
-            <div class="card-body">
-                <canvas id="chartMensal"></canvas>
-            </div>
-        </div>
-    </div>
-    <div class="col-12 col-md-6">
-        <div class="card">
-            <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">📊 Custo Mensal</h5>
-                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#comparativoModal">📊 Comparativo</button>
-            </div>
-            <div class="card-body">
-                <canvas id="chartCustoMensal"></canvas>
-            </div>
-        </div>
-    </div>
-</div>
-
 <div class="row g-4 mt-2">
     <div class="col-12">
         <div class="card">
             <div class="card-header bg-transparent">
-                <h5 class="mb-0">💰 Lucro Mensal</h5>
+                <h5 class="mb-0">📊 Comparativo Mensal: Produção, Custos e Lucro</h5>
             </div>
             <div class="card-body">
-                <canvas id="chartLucroMensal"></canvas>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="row g-4 mt-2">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">📈 Evolução Custo/Litro</h5>
-                <small class="text-muted">Média: <strong>R$ {{ "%.2f"|format(rel_custo_litro_media) }}</strong></small>
-            </div>
-            <div class="card-body">
-                <canvas id="chartCustoLiteroRel"></canvas>
+                <canvas id="chartComparativo" height="130"></canvas>
+                <div id="comparativo-legend" class="d-flex justify-content-center flex-wrap gap-4 mt-3 small">
+                    <span><span style="display:inline-block;width:16px;height:16px;border-radius:3px;background:#27AE60;"></span> Produção (L)</span>
+                    <span><span style="display:inline-block;width:16px;height:16px;border-radius:3px;background:#F39C12;"></span> Custo (R$)</span>
+                    <span><span style="display:inline-block;width:16px;height:16px;border-radius:3px;background:#3498DB;"></span> Lucro (R$)</span>
+                </div>
             </div>
         </div>
     </div>
 </div>
 {% endif %}
-
-<!-- Modal Comparativo Mensal -->
-<div class="modal fade" id="comparativoModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header" style="background: linear-gradient(135deg, var(--navy-dark) 0%, var(--dark-green) 100%); color: white;">
-                <h5 class="modal-title">📊 Comparativo Mensal</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <canvas id="chartComparativoModal" height="130"></canvas>
-            </div>
-            <div class="modal-footer d-flex justify-content-between">
-                <div class="d-flex gap-3 small">
-                    <span><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#27AE60;"></span> Produção (L)</span>
-                    <span><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#F39C12;"></span> Custo (R$)</span>
-                    <span><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#3498DB;"></span> Lucro (R$)</span>
-                </div>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-            </div>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 {% if tipo == 'vendas-avulsas' %}
-new Chart(document.getElementById('chartVendas').getContext('2d'), {
+{% if dias_grafico %}
+const coresVendas = ['#8E44AD', '#2E86C1', '#27AE60', '#F39C12', '#E74C3C', '#1ABC9C', '#9B59B6', '#3498DB', '#2ECC71', '#F1C40F', '#E67E22', '#1F618D', '#AF7AC5', '#BB8FCE', '#C39BD3', '#D2B4DE', '#E8DAEF', '#7FB3D8', '#85C1E9', '#AED6F1', '#76D7C4', '#A3E4D7', '#ABEBC6', '#A9DFBF', '#F9E79F', '#FAD7A0', '#F5B041', '#EB984E', '#E59866', '#DC7633'];
+new Chart(document.getElementById('chartVendasUnico').getContext('2d'), {
     type: 'bar',
     data: {
         labels: {{ dias_grafico|tojson }},
         datasets: [{
             label: 'Vendas (R$)',
             data: {{ valores_venda|tojson }},
-            backgroundColor: ['#8E44AD', '#9B59B6', '#AF7AC5', '#BB8FCE', '#C39BD3', '#D2B4DE', '#E8DAEF', '#7FB3D8', '#85C1E9', '#AED6F1', '#D6EAF8', '#76D7C4', '#A3E4D7', '#ABEBC6', '#A9DFBF', '#F9E79F', '#FAD7A0', '#F5B041', '#EB984E', '#E59866', '#DC7633', '#CA6F1E', '#BA4A00', '#A04000', '#6E2C00', '#1A5276', '#1F618D', '#2E86C1', '#3498DB', '#5DADE2'],
+            backgroundColor: coresVendas.slice(0, {{ dias_grafico|length }}),
             borderRadius: 4,
             borderSkipped: false
         }]
@@ -281,7 +205,7 @@ new Chart(document.getElementById('chartVendas').getContext('2d'), {
     options: {
         responsive: true,
         plugins: {
-            legend: { display: false },
+            legend: { display: true, position: 'bottom', labels: { usePointStyle: true, padding: 16, font: { size: 11 } } },
             tooltip: {
                 backgroundColor: 'rgba(44, 62, 80, 0.9)',
                 padding: 12,
@@ -297,260 +221,31 @@ new Chart(document.getElementById('chartVendas').getContext('2d'), {
         }
     }
 });
-
-if ({{ meses_labels_vendas|length }} > 0) {
-new Chart(document.getElementById('chartVendasMensal').getContext('2d'), {
-    type: 'bar',
-    data: {
-        labels: {{ meses_labels_vendas|tojson }},
-        datasets: [{
-            label: 'Vendas (R$)',
-            data: {{ valores_vendas_mensais|tojson }},
-            backgroundColor: ['#8E44AD', '#2E86C1', '#27AE60', '#F39C12', '#E74C3C', '#1ABC9C', '#9B59B6', '#3498DB', '#2ECC71', '#F1C40F', '#E67E22', '#1F618D'],
-            borderRadius: 4,
-            borderSkipped: false
-        }]
-    },
-    options: {
-        responsive: true,
-        plugins: {
-            legend: { display: false },
-            tooltip: {
-                backgroundColor: 'rgba(44, 62, 80, 0.9)',
-                padding: 12,
-                cornerRadius: 8,
-                callbacks: {
-                    label: function(context) { return 'R$ ' + context.parsed.y.toFixed(2); }
-                }
-            }
-        },
-        scales: {
-            y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 } } },
-            x: { grid: { display: false }, ticks: { font: { size: 10 } } }
-        }
-    }
-});
-}
+{% endif %}
 {% else %}
-new Chart(document.getElementById('chartCusto').getContext('2d'), {
-    type: 'bar',
-    data: {
-        labels: {{ custo_por_tipo.keys()|list|tojson }},
-        datasets: [{
-            label: 'Custo (R$)',
-            data: {{ custo_por_tipo.values()|list|tojson }},
-            backgroundColor: ['#2C3E50', '#27AE60', '#1E8449', '#6E4F32', '#F1C40F'],
-            borderColor: ['#2C3E50', '#27AE60', '#1E8449', '#6E4F32', '#F1C40F'],
-            borderWidth: 1,
-            borderRadius: 4
-        }]
-    },
-    options: {
-        responsive: true,
-        indexAxis: 'y',
-        plugins: {
-            legend: { display: false },
-            tooltip: {
-                backgroundColor: 'rgba(44, 62, 80, 0.9)',
-                padding: 12,
-                cornerRadius: 8,
-                callbacks: {
-                    label: function(context) { return 'R$ ' + context.parsed.x.toFixed(2); }
-                }
-            }
-        },
-        scales: {
-            x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 } } },
-            y: { grid: { display: false }, ticks: { font: { size: 11 } } }
-        }
-    }
-});
-
-const coresMensais = ['#8E44AD', '#2E86C1', '#27AE60', '#F39C12', '#E74C3C', '#1ABC9C', '#9B59B6', '#3498DB', '#2ECC71', '#F1C40F', '#E67E22', '#1F618D'];
-
-if ({{ meses_labels|length }} > 0) {
-new Chart(document.getElementById('chartMensal').getContext('2d'), {
-    type: 'bar',
-    data: {
-        labels: {{ meses_labels|tojson }},
-        datasets: [{
-            label: 'Litros',
-            data: {{ valores_mensais|tojson }},
-            backgroundColor: coresMensais.slice(0, {{ meses_labels|length }}),
-            borderRadius: 4,
-            borderSkipped: false
-        }]
-    },
-    options: {
-        responsive: true,
-        plugins: {
-            legend: { display: false },
-            tooltip: {
-                backgroundColor: 'rgba(44, 62, 80, 0.9)',
-                padding: 12,
-                cornerRadius: 8,
-                callbacks: {
-                    label: function(context) { return '🥛 ' + context.parsed.y.toFixed(0) + ' L'; }
-                }
-            }
-        },
-        scales: {
-            y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 } } },
-            x: { grid: { display: false }, ticks: { font: { size: 10 } } }
-        }
-    }
-});
-
-new Chart(document.getElementById('chartCustoMensal').getContext('2d'), {
-    type: 'bar',
-    data: {
-        labels: {{ meses_labels|tojson }},
-        datasets: [{
-            label: 'Custo (R$)',
-            data: {{ custo_mensal|tojson }},
-            backgroundColor: ['#F39C12', '#E67E22', '#D35400', '#F1C40F', '#F5B041', '#EB984E', '#E59866', '#DC7633', '#CA6F1E', '#BA4A00', '#A04000', '#873600'].slice(0, {{ meses_labels|length }}),
-            borderRadius: 4,
-            borderSkipped: false
-        }]
-    },
-    options: {
-        responsive: true,
-        plugins: {
-            legend: { display: false },
-            tooltip: {
-                backgroundColor: 'rgba(44, 62, 80, 0.9)',
-                padding: 12,
-                cornerRadius: 8,
-                callbacks: {
-                    label: function(context) { return '💰 R$ ' + context.parsed.y.toFixed(2); }
-                }
-            }
-        },
-        scales: {
-            y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 } } },
-            x: { grid: { display: false }, ticks: { font: { size: 10 } } }
-        }
-    }
-});
-
-new Chart(document.getElementById('chartLucroMensal').getContext('2d'), {
-    type: 'bar',
-    data: {
-        labels: {{ meses_labels|tojson }},
-        datasets: [{
-            label: 'Lucro (R$)',
-            data: {{ lucro_mensal|tojson }},
-            backgroundColor: ['#3498DB', '#2E86C1', '#2874A6', '#1F618D', '#1A5276', '#154360', '#85C1E9', '#5DADE2', '#48C9B0', '#1ABC9C', '#17A589', '#148F77'].slice(0, {{ meses_labels|length }}),
-            borderRadius: 4,
-            borderSkipped: false
-        }]
-    },
-    options: {
-        responsive: true,
-        plugins: {
-            legend: { display: false },
-            tooltip: {
-                backgroundColor: 'rgba(44, 62, 80, 0.9)',
-                padding: 12,
-                cornerRadius: 8,
-                callbacks: {
-                    label: function(context) { return '📈 R$ ' + context.parsed.y.toFixed(2); }
-                }
-            }
-        },
-        scales: {
-            y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 } } },
-            x: { grid: { display: false }, ticks: { font: { size: 10 } } }
-        }
-    }
-});
-}
-
-if ({{ rel_custo_litro_valores|length }} > 1) {
-const coresRel = { red: '#E74C3C', navy: '#2C3E50' };
-new Chart(document.getElementById('chartCustoLiteroRel').getContext('2d'), {
-    type: 'line',
-    data: {
-        labels: {{ rel_custo_litro_dias|tojson }},
-        datasets: [{
-            label: 'Custo/Litro (R$)',
-            data: {{ rel_custo_litro_valores|tojson }},
-            borderColor: coresRel.red,
-            backgroundColor: function(context) {
-                const chart = context.chart;
-                const {ctx, chartArea} = chart;
-                if (!chartArea) return 'rgba(231, 76, 60, 0.1)';
-                const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
-                gradient.addColorStop(0, 'rgba(231, 76, 60, 0.0)');
-                gradient.addColorStop(1, 'rgba(231, 76, 60, 0.3)');
-                return gradient;
-            },
-            fill: true,
-            tension: 0.4,
-            borderWidth: 3,
-            pointBackgroundColor: '#E74C3C',
-            pointBorderColor: '#fff',
-            pointBorderWidth: 2,
-            pointRadius: 3,
-            pointHoverRadius: 6
-        }, {
-            label: 'Média',
-            data: Array({{ rel_custo_litro_valores|length }}).fill({{ rel_custo_litro_media }}),
-            borderColor: coresRel.navy,
-            borderDash: [6, 3],
-            borderWidth: 2,
-            pointRadius: 0,
-            fill: false
-        }]
-    },
-    options: {
-        responsive: true,
-        plugins: {
-            legend: { display: false },
-            tooltip: {
-                backgroundColor: 'rgba(44, 62, 80, 0.9)',
-                padding: 12,
-                cornerRadius: 8,
-                callbacks: {
-                    label: function(context) { return 'R$ ' + context.parsed.y.toFixed(4); }
-                }
-            }
-        },
-        scales: {
-            y: {
-                beginAtZero: true,
-                grid: { color: 'rgba(0,0,0,0.05)' },
-                ticks: { callback: function(v) { return 'R$ ' + v.toFixed(2); } }
-            },
-            x: { grid: { display: false }, ticks: { maxTicksLimit: 15, font: { size: 10 } } }
-        }
-    }
-});
-}
-// Comparativo Mensal - Barras Agrupadas (Produção, Custo, Lucro)
-if ({{ meses_labels|length }} > 0) {
-new Chart(document.getElementById('chartComparativoModal').getContext('2d'), {
+{% if meses_labels|length > 0 %}
+const chartComparativo = new Chart(document.getElementById('chartComparativo').getContext('2d'), {
     type: 'bar',
     data: {
         labels: {{ meses_labels|tojson }},
         datasets: [{
             label: 'Produção (L)',
             data: {{ valores_mensais|tojson }},
-            backgroundColor: 'rgba(39, 174, 96, 0.85)',
+            backgroundColor: 'rgba(39, 174, 96, 0.8)',
             borderColor: '#27AE60',
             borderWidth: 1,
             borderRadius: 4
         }, {
             label: 'Custo (R$)',
             data: {{ custo_mensal|tojson }},
-            backgroundColor: 'rgba(241, 196, 15, 0.85)',
-            borderColor: '#F1C40F',
+            backgroundColor: 'rgba(243, 156, 18, 0.8)',
+            borderColor: '#F39C12',
             borderWidth: 1,
             borderRadius: 4
         }, {
             label: 'Lucro (R$)',
             data: {{ lucro_mensal|tojson }},
-            backgroundColor: 'rgba(52, 152, 219, 0.85)',
+            backgroundColor: 'rgba(52, 152, 219, 0.8)',
             borderColor: '#3498DB',
             borderWidth: 1,
             borderRadius: 4
@@ -560,7 +255,7 @@ new Chart(document.getElementById('chartComparativoModal').getContext('2d'), {
         responsive: true,
         maintainAspectRatio: true,
         plugins: {
-            legend: { display: false },
+            legend: { display: true, position: 'bottom', labels: { usePointStyle: true, padding: 16, font: { size: 12 } } },
             tooltip: {
                 backgroundColor: 'rgba(44, 62, 80, 0.9)',
                 padding: 12,
@@ -570,19 +265,12 @@ new Chart(document.getElementById('chartComparativoModal').getContext('2d'), {
             }
         },
         scales: {
-            x: {
-                grid: { display: false },
-                ticks: { font: { size: 11 } }
-            },
-            y: {
-                beginAtZero: true,
-                grid: { color: 'rgba(0,0,0,0.06)' },
-                ticks: { font: { size: 11 } }
-            }
+            x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+            y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { font: { size: 11 } } }
         }
     }
 });
-}
+{% endif %}
 {% endif %}
 </script>
 {% endblock %}
