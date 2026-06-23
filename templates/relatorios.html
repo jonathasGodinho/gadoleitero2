@@ -199,7 +199,9 @@ new Chart(document.getElementById('chartVendasUnico').getContext('2d'), {
             data: {{ valores_venda|tojson }},
             backgroundColor: coresVendas.slice(0, {{ dias_grafico|length }}),
             borderRadius: 4,
-            borderSkipped: false
+            borderSkipped: false,
+            barPercentage: 0.35,
+            categoryPercentage: 0.7
         }]
     },
     options: {
@@ -234,21 +236,27 @@ const chartComparativo = new Chart(document.getElementById('chartComparativo').g
             backgroundColor: 'rgba(39, 174, 96, 0.8)',
             borderColor: '#27AE60',
             borderWidth: 1,
-            borderRadius: 4
+            borderRadius: 4,
+            barPercentage: 0.5,
+            categoryPercentage: 0.6
         }, {
             label: 'Custo (R$)',
             data: {{ custo_mensal|tojson }},
             backgroundColor: 'rgba(243, 156, 18, 0.8)',
             borderColor: '#F39C12',
             borderWidth: 1,
-            borderRadius: 4
+            borderRadius: 4,
+            barPercentage: 0.5,
+            categoryPercentage: 0.6
         }, {
             label: 'Lucro (R$)',
             data: {{ lucro_mensal|tojson }},
             backgroundColor: 'rgba(52, 152, 219, 0.8)',
             borderColor: '#3498DB',
             borderWidth: 1,
-            borderRadius: 4
+            borderRadius: 4,
+            barPercentage: 0.5,
+            categoryPercentage: 0.6
         }]
     },
     options: {
