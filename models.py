@@ -118,3 +118,15 @@ class VendaAvulsa(db.Model):
     valor_litro = db.Column(db.Numeric(10, 4), nullable=False)
     total = db.Column(db.Numeric(10, 2), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class BackupLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    filename = db.Column(db.String(200), nullable=False)
+    size_bytes = db.Column(db.Integer)
+    checksum_sha256 = db.Column(db.String(64))
+    record_count = db.Column(db.Integer)
+    tables_info = db.Column(db.Text)
+    status = db.Column(db.String(20), default='success')
+    error_message = db.Column(db.Text)
+    backup_type = db.Column(db.String(10), default='manual')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)

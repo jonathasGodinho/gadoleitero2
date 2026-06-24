@@ -1,25 +1,19 @@
 import sys
 from app import app, db
 from init_db import init_database
-from backup_util import auto_backup, should_daily_backup
 
-print('[run] Verificando backup automatico...')
-try:
-    if should_daily_backup():
-        path = auto_backup(app, db)
-        if path:
-            print(f'[run] Backup diario salvo em: {path}')
-        else:
-            print('[run] Nenhum dado para backup (banco vazio)')
-    else:
-        print('[run] Backup diario ja realizado hoje')
-except Exception as e:
-    print(f'[run] Erro no backup automatico: {e}', file=sys.stderr)
-
+print('[run] Inicializando banco de dados...')
 try:
     init_database()
 except Exception as e:
     print(f'[run] Erro na inicializacao do banco: {e}', file=sys.stderr)
+
+print('[run] Inicializando scheduler de backup...')
+try:
+    from backup_scheduler import init_scheduler
+    init_scheduler(app)
+except Exception as e:
+    print(f'[run] Erro ao iniciar scheduler: {e}', file=sys.stderr)
 
 if __name__ == '__main__':
     import os

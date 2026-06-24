@@ -2,10 +2,10 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash
 from extensions import db
-from models import User, AuditLog, ProducaoLeite, ConsumoRacao, Despesa, VendaAvulsa, SaudeAnimal, PrecoLeite
+from models import User, AuditLog, ProducaoLeite, ConsumoRacao, Despesa, VendaAvulsa, SaudeAnimal, PrecoLeite, BackupLog
 from utils import log_auditoria
 from datetime import datetime, date
-import json, re, os
+import json, re, os, hashlib
 from pathlib import Path
 
 admin_bp = Blueprint('admin', __name__)
@@ -15,8 +15,7 @@ admin_bp = Blueprint('admin', __name__)
 @login_required
 def ajustes():
     precos = PrecoLeite.query.order_by(PrecoLeite.data_vigencia.desc()).all()
-    from backup_util import list_backups
-    backups = list_backups()
+    backups = BackupLog.query.order_by(BackupLog.created_at.desc()).limit(50).all()
     return render_template('ajustes.html', precos=precos, backups=backups)
 
 
@@ -70,7 +69,7 @@ def reset_dados():
 
 @admin_bp.route('/ajustes/restaurar', methods=['POST'])
 @login_required
-def restaurar_backup():
+def ajustes_restaurar_backup():
     if current_user.role not in ['admin', 'gerente']:
         flash('Acesso restrito', 'danger')
         return redirect(url_for('admin.ajustes'))
@@ -204,7 +203,9 @@ def backup_page():
     if current_user.role != 'admin':
         flash('Acesso restrito', 'danger')
         return redirect(url_for('geral.index'))
-    return render_template('backup.html')
+    from backup_util import get_backup_stats
+    stats = get_backup_stats()
+    return render_template('backup.html', stats=stats)
 
 
 @admin_bp.route('/admin/backup/criar', methods=['POST'])
@@ -214,32 +215,27 @@ def criar_backup():
         flash('Acesso restrito', 'danger')
         return redirect(url_for('geral.index'))
 
-    from datetime import datetime
-    backup_name = f'backup_terra_roxa_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
+    from backup_util import perform_backup
+    result = perform_backup(backup_type='manual')
 
-    backup_data = {}
-    for table_name in ['animal', 'tipo_racao', 'producao_leite', 'consumo_racao',
-                       'preco_leite', 'despesa', 'orcamento', 'user', 'audit_log',
-                       'cliente', 'venda_avulsa', 'saude_animal']:
-        try:
-            table = db.metadata.tables.get(table_name)
-            if table is None:
-                continue
-            rows = db.session.execute(table.select()).fetchall()
-            backup_data[table_name] = [dict(row._mapping) for row in rows]
-        except Exception:
-            backup_data[table_name] = []
+    if result['status'] == 'success':
+        log_auditoria('Backup manual criado', f'{result["filename"]} ({result["records"]} registros)')
+        flash(result['message'], 'success')
+    elif result['status'] == 'skipped':
+        flash(result['message'], 'warning')
+    else:
+        flash(f'Erro: {result["message"]}', 'danger')
 
-    from backup_util import BACKUP_DIR
-    BACKUP_DIR.mkdir(exist_ok=True)
-    filepath = BACKUP_DIR / backup_name
-    import json
-    with open(filepath, 'w', encoding='utf-8') as f:
-        json.dump(backup_data, f, ensure_ascii=False, indent=2, default=str)
-
-    log_auditoria('Backup realizado', f'Arquivo: {backup_name}')
-    flash(f'Backup salvo em: {backup_name}', 'success')
     return redirect(url_for('admin.backup_page'))
+
+
+@admin_bp.route('/admin/backup/stats')
+@login_required
+def backup_stats():
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Acesso restrito'}), 403
+    from backup_util import get_backup_stats
+    return jsonify(get_backup_stats())
 
 
 @admin_bp.route('/admin/backup/listar')
@@ -247,13 +243,18 @@ def criar_backup():
 def listar_backups():
     if current_user.role != 'admin':
         return jsonify([])
-    from backup_util import list_backups
-    backups = list_backups()
+    logs = BackupLog.query.order_by(BackupLog.created_at.desc()).limit(100).all()
     return jsonify([{
-        'filename': b['filename'],
-        'size': f"{b['size'] / 1024:.1f} KB",
-        'date': b['date'].strftime('%d/%m/%Y %H:%M')
-    } for b in backups])
+        'id': l.id,
+        'filename': l.filename,
+        'size': l.size_bytes,
+        'size_fmt': f"{l.size_bytes / 1024:.1f} KB" if l.size_bytes else '0 B',
+        'date': l.created_at.strftime('%d/%m/%Y %H:%M') if l.created_at else '',
+        'status': l.status,
+        'records': l.record_count,
+        'type': l.backup_type,
+        'checksum': l.checksum_sha256
+    } for l in logs])
 
 
 @admin_bp.route('/admin/backup/download/<filename>')
@@ -268,3 +269,53 @@ def download_backup(filename):
         flash('Arquivo nao encontrado', 'danger')
         return redirect(url_for('admin.backup_page'))
     return send_file(str(filepath), as_attachment=True, download_name=filename)
+
+
+@admin_bp.route('/admin/backup/verificar/<filename>')
+@login_required
+def verificar_backup(filename):
+    if current_user.role != 'admin':
+        flash('Acesso restrito', 'danger')
+        return redirect(url_for('geral.index'))
+    from backup_util import verify_backup
+    result = verify_backup(filename)
+    if result.get('error'):
+        flash(f'Erro na verificacao: {result["error"]}', 'danger')
+    elif result['valid']:
+        match = '✓ checksum OK' if result.get('checksum_match') else '✓ integro (sem checksum armazenado)'
+        flash(f'Backup verificado: {match}', 'success')
+    else:
+        flash('✗ Backup corrompido ou invalido', 'danger')
+    return redirect(url_for('admin.backup_page'))
+
+
+@admin_bp.route('/admin/backup/restaurar', methods=['POST'])
+@login_required
+def restaurar_backup():
+    if current_user.role not in ['admin', 'gerente']:
+        flash('Acesso restrito', 'danger')
+        return redirect(url_for('geral.index'))
+
+    filename = request.form.get('filename')
+    if not filename:
+        flash('Nenhum arquivo selecionado', 'danger')
+        return redirect(url_for('admin.backup_page'))
+
+    if not re.match(r'^[\w\-\.]+$', filename):
+        flash('Nome de arquivo invalido', 'danger')
+        return redirect(url_for('admin.backup_page'))
+
+    from backup_util import restore_backup, BACKUP_DIR
+    filepath = BACKUP_DIR / filename
+    if not filepath.exists():
+        flash('Arquivo de backup nao encontrado', 'danger')
+        return redirect(url_for('admin.backup_page'))
+
+    try:
+        total = restore_backup(filename)
+        log_auditoria('Backup restaurado', f'Arquivo: {filename} ({total} registros)')
+        flash(f'Backup restaurado com sucesso! {total} registros recuperados.', 'success')
+    except Exception as e:
+        flash(f'Erro ao restaurar backup: {str(e)}', 'danger')
+
+    return redirect(url_for('admin.backup_page'))

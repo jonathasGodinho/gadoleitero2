@@ -114,7 +114,8 @@
                             <option value="">-- Selecione um backup --</option>
                             {% for b in backups %}
                             <option value="{{ b.filename }}">
-                                {{ b.date.strftime('%d/%m/%Y %H:%M') }}
+                                {% if b.created_at %}{{ b.created_at.strftime('%d/%m/%Y %H:%M') }}{% else %}{{ b.filename }}{% endif %}
+                                {% if b.status == 'failed' %}(falhou){% endif %}
                             </option>
                             {% endfor %}
                         </select>

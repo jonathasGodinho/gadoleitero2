@@ -4,87 +4,233 @@
 
 {% block content %}
 <div class="row g-4">
+    {% if stats.last_backup %}
+    <div class="col-12">
+        <div class="card border-{{ 'success' if stats.last_backup.status == 'success' else 'danger' }}">
+            <div class="card-body d-flex align-items-center justify-content-between">
+                <div>
+                    <small class="text-muted">Último backup</small>
+                    <div class="fw-bold fs-5">{{ stats.last_backup.date }}</div>
+                    <small class="text-muted">
+                        {{ stats.last_backup.filename }} &middot;
+                        {{ (stats.last_backup.size / 1024)|round(1) }} KB &middot;
+                        {{ stats.last_backup.records }} registros
+                    </small>
+                </div>
+                <span class="fs-1">{{ '✅' if stats.last_backup.status == 'success' else '❌' }}</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="col-md-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <div class="fs-2 fw-bold text-success">{{ stats.success }}</div>
+                <small class="text-muted">Sucesso</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <div class="fs-2 fw-bold text-{{ 'danger' if stats.failed > 0 else 'muted' }}">{{ stats.failed }}</div>
+                <small class="text-muted">Falhas</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <div class="fs-2 fw-bold">{{ stats.total }}</div>
+                <small class="text-muted">Total</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <div class="fs-2 fw-bold">
+                    {% if stats.total_size_bytes > 1048576 %}
+                        {{ (stats.total_size_bytes / 1048576)|round(1) }} MB
+                    {% else %}
+                        {{ (stats.total_size_bytes / 1024)|round(1) }} KB
+                    {% endif %}
+                </div>
+                <small class="text-muted">Total armazenado</small>
+            </div>
+        </div>
+    </div>
+
     <div class="col-md-6">
         <div class="card h-100">
-            <div class="card-header bg-transparent">
-                <h5 class="mb-0">📦 Criar Backup</h5>
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">📦 Backup Manual</h5>
+                <span class="badge bg-success fs-6"
+                      title="Backup automatico diario as 02:00 | Retencao: {{ stats.daily_keep }} diarios, {{ stats.weekly_keep }} semanais, {{ stats.monthly_keep }} mensais">
+                    ⏰ 02:00
+                </span>
             </div>
             <div class="card-body d-flex flex-column">
-                <p class="card-text">Gera um arquivo JSON com todos os registros do banco e salva na pasta de backups. Você pode baixá-lo ou restaurá-lo depois em Ajustes.</p>
+                <p class="card-text">
+                    Gera um backup compactado <code>.tar.gz</code> com verificação SHA256.
+                    Os backups antigos são removidos automaticamente conforme a política de retenção.
+                </p>
                 <div class="mt-auto">
                     <form method="POST" action="/admin/backup/criar">
                         {{ csrf_token_input|safe }}
-                        <button type="submit" class="btn btn-success">📦 Criar Backup Agora</button>
+                        <button type="submit" class="btn btn-success">
+                            📦 Criar Backup Agora
+                        </button>
                     </form>
                 </div>
             </div>
         </div>
     </div>
+
     <div class="col-md-6">
         <div class="card h-100">
             <div class="card-header bg-transparent">
-                <h5 class="mb-0">🔄 Backup Automático</h5>
+                <h5 class="mb-0">🛡️ Política de Retenção</h5>
             </div>
-            <div class="card-body d-flex flex-column">
-                <p class="card-text">O sistema faz backup automático todos os dias ao iniciar. Os últimos 30 backups são mantidos.</p>
-                <div class="mt-auto">
-                    <small class="text-muted">Último backup: <span id="ultimo-backup">carregando...</span></small>
+            <div class="card-body">
+                <div class="d-flex justify-content-around text-center">
+                    <div>
+                        <div class="fw-bold fs-4">{{ stats.daily_keep }}</div>
+                        <small class="text-muted">Diários</small>
+                    </div>
+                    <div>
+                        <div class="fw-bold fs-4">{{ stats.weekly_keep }}</div>
+                        <small class="text-muted">Semanais</small>
+                    </div>
+                    <div>
+                        <div class="fw-bold fs-4">{{ stats.monthly_keep }}</div>
+                        <small class="text-muted">Mensais</small>
+                    </div>
                 </div>
+                <hr>
+                <small class="text-muted">
+                    Backup semanal = segunda-feira | Backup mensal = dia 1
+                </small>
             </div>
         </div>
     </div>
+
     <div class="col-12">
         <div class="card">
-            <div class="card-header bg-transparent">
-                <h5 class="mb-0">📂 Backups Disponíveis</h5>
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">📂 Histórico de Backups</h5>
+                <small class="text-muted"><span id="backup-count">{{ stats.recent|length }}</span> backups</small>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
                         <thead>
                             <tr>
-                                <th>Arquivo</th>
-                                <th>Tamanho</th>
                                 <th>Data</th>
-                                <th>Ação</th>
+                                <th>Tipo</th>
+                                <th>Tamanho</th>
+                                <th>Registros</th>
+                                <th>Status</th>
+                                <th>Integridade</th>
+                                <th>Ações</th>
                             </tr>
                         </thead>
-                        <tbody id="lista-backups">
+                        <tbody>
+                            {% for b in stats.recent %}
                             <tr>
-                                <td colspan="4" class="text-center text-muted">Carregando...</td>
+                                <td class="text-nowrap">{{ b.date }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'info' if b.type == 'auto' else 'secondary' }}">
+                                        {{ 'Automático' if b.type == 'auto' else 'Manual' }}
+                                    </span>
+                                </td>
+                                <td>{{ (b.size / 1024)|round(1) if b.size else 0 }} KB</td>
+                                <td>{{ b.records or '-' }}</td>
+                                <td>
+                                    {% if b.status == 'success' %}
+                                        <span class="text-success">✅ Sucesso</span>
+                                    {% else %}
+                                        <span class="text-danger">❌ Falha</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if b.status == 'success' %}
+                                    <a href="/admin/backup/verificar/{{ b.filename }}" class="btn btn-sm btn-outline-info" title="Verificar checksum SHA256">
+                                        🔍 Verificar
+                                    </a>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-nowrap">
+                                    {% if b.status == 'success' %}
+                                    <a href="/admin/backup/download/{{ b.filename }}" class="btn btn-sm btn-outline-primary" title="Download .tar.gz">
+                                        ⬇️
+                                    </a>
+                                    {% endif %}
+                                </td>
                             </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-4">
+                                    Nenhum backup encontrado. Clique em "Criar Backup Agora" para começar.
+                                </td>
+                            </tr>
+                            {% endfor %}
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
     </div>
+
+    {% if stats.calendar %}
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-transparent">
+                <h5 class="mb-0">📅 Calendário de Backups</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2" id="calendar-grid">
+                </div>
+                <div class="mt-3 d-flex gap-3">
+                    <span><span class="badge bg-success">&nbsp;&nbsp;</span> Sucesso</span>
+                    <span><span class="badge bg-danger">&nbsp;&nbsp;</span> Falha</span>
+                    <span><span class="badge bg-light text-dark border">&nbsp;&nbsp;</span> Sem backup</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    fetch('/admin/backup/listar')
-        .then(r => r.json())
-        .then(backups => {
-            const tbody = document.getElementById('lista-backups');
-            if (backups.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nenhum backup encontrado</td></tr>';
-                document.getElementById('ultimo-backup').textContent = 'nenhum';
-                return;
+    const calendarData = {{ stats.calendar|tojson|safe }};
+    if (calendarData && Object.keys(calendarData).length > 0) {
+        const grid = document.getElementById('calendar-grid');
+        const today = new Date();
+        const start = new Date(today);
+        start.setDate(today.getDate() - 29);
+        for (let d = new Date(start); d <= today; d.setDate(d.getDate() + 1)) {
+            const key = d.toISOString().slice(0, 10);
+            const entry = calendarData[key];
+            const dayDiv = document.createElement('div');
+            dayDiv.className = 'text-center p-2 rounded border';
+            dayDiv.style.width = '48px';
+            dayDiv.style.fontSize = '0.75rem';
+            if (entry) {
+                dayDiv.classList.add(entry.status === 'success' ? 'bg-success text-white' : 'bg-danger text-white');
+                dayDiv.title = `${key}: ${entry.count} backup(s)`;
+            } else {
+                dayDiv.classList.add('bg-light');
+                dayDiv.style.color = '#ccc';
             }
-            document.getElementById('ultimo-backup').textContent = backups[0].date;
-            tbody.innerHTML = backups.map(b => `
-                <tr>
-                    <td><code>${b.filename}</code></td>
-                    <td>${b.size}</td>
-                    <td>${b.date}</td>
-                    <td><a href="/admin/backup/download/${b.filename}" class="btn btn-sm btn-outline-primary">Baixar</a></td>
-                </tr>
-            `).join('');
-        })
-        .catch(() => {
-            document.getElementById('lista-backups').innerHTML = '<tr><td colspan="4" class="text-center text-danger">Erro ao carregar</td></tr>';
-        });
+            dayDiv.textContent = d.getDate();
+            grid.appendChild(dayDiv);
+        }
+    }
 </script>
 {% endblock %}
