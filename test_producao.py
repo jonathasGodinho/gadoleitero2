@@ -1,30 +1,58 @@
-from app import app
+from datetime import date, timedelta
 
-with app.test_client() as client:
-    client.post('/login', data={'email': 'admin@terra-roxa.com', 'password': 'admin123'})
-    resp = client.get('/producao')
-    html = resp.data.decode()
-    
-    print('=== STATUS ===')
-    print('HTTP Status:', resp.status_code)
-    
-    print('\n=== MODAL CHECK ===')
-    print('Button data-bs-toggle present:', 'data-bs-toggle="modal"' in html)
-    print('Button data-bs-target present:', 'data-bs-target="#novaProducaoModal"' in html)
-    print('Modal div present:', 'id="novaProducaoModal"' in html)
-    print('Modal class fade:', 'modal fade' in html)
-    print('Bootstrap JS loaded:', 'bootstrap.bundle.min.js' in html)
-    
-    print('\n=== HTML STRUCTURE ===')
-    open_divs = html.count('<div')
-    close_divs = html.count('</div>')
-    print(f'Open divs: {open_divs}')
-    print(f'Close divs: {close_divs}')
-    print(f'Balance: {open_divs - close_divs}')
-    
-    print('\n=== FORM FIELDS ===')
-    print('animal_id select:', 'name="animal_id"' in html)
-    print('litros input:', 'name="litros"' in html)
-    print('preco_venda input:', 'name="preco_venda"' in html)
-    print('data input:', 'name="data"' in html)
-    print('form method POST:', '<form method="POST">' in html)
+
+class TestProducao:
+    def test_producao_page(self, client, login_admin):
+        resp = client.get('/producao')
+        assert resp.status_code == 200
+
+    def test_producao_filter(self, client, login_admin):
+        hoje = date.today()
+        data_ini = (hoje - timedelta(days=30)).strftime('%Y-%m-%d')
+        data_fim = hoje.strftime('%Y-%m-%d')
+        resp = client.get(f'/producao?data_ini={data_ini}&data_fim={data_fim}')
+        assert resp.status_code == 200
+
+    def test_create_producao(self, client, login_admin):
+        hoje = date.today().strftime('%Y-%m-%d')
+        resp = client.post('/producao', data={
+            'litros': '30.5', 'data': hoje, 'preco_venda': '2.50',
+            'gordura': '3.5', 'proteina': '3.2', 'ccs': '200',
+        }, follow_redirects=True)
+        assert resp.status_code == 200
+
+    def test_create_producao_invalid_litros(self, client, login_admin):
+        hoje = date.today().strftime('%Y-%m-%d')
+        resp = client.post('/producao', data={
+            'litros': 'abc', 'data': hoje,
+        }, follow_redirects=True)
+        assert resp.status_code == 200
+
+    def test_edit_producao(self, client, login_admin):
+        resp = client.post('/producao/editar/1', data={
+            'litros': '35.0', 'data': date.today().strftime('%Y-%m-%d'),
+            'preco_venda': '2.60',
+        }, follow_redirects=True)
+        assert resp.status_code == 200
+
+    def test_edit_producao_not_found(self, client, login_admin):
+        resp = client.get('/producao/editar/999', follow_redirects=True)
+        assert resp.status_code == 404
+
+    def test_delete_producao_admin(self, client, login_admin):
+        resp = client.get('/producao/excluir/1', follow_redirects=True)
+        assert resp.status_code == 200
+
+    def test_delete_producao_denied_operador(self, client, login_operador):
+        resp = client.get('/producao/excluir/2', follow_redirects=True)
+        assert resp.status_code == 200
+
+    def test_export_pdf(self, client, login_admin):
+        resp = client.get('/producao/exportar/pdf')
+        assert resp.status_code == 200
+        assert resp.content_type in ('application/pdf', 'text/html')
+
+    def test_export_excel(self, client, login_admin):
+        resp = client.get('/producao/exportar/excel')
+        assert resp.status_code == 200
+        assert 'spreadsheetml' in resp.content_type or 'openxml' in resp.content_type

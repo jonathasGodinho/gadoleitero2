@@ -65,9 +65,9 @@
                             <td>{{ o.mes }}</td>
                             <td><span class="badge" style="background: var(--success-light); color: var(--dark-green);">{{ o.categoria }}</span></td>
                             <td>R$ {{ "%.2f"|format(o.valor_previsto) }}</td>
-                            <td>R$ {{ "%.2f"|format(o.valor_realizado) }}</td>
+                            <td>R$ {{ "%.2f"|format(o.valor_realizado or 0) }}</td>
                             <td>
-                                {% set diff = o.valor_realizado - o.valor_previsto %}
+                                {% set diff = (o.valor_realizado or 0) - (o.valor_previsto or 0) %}
                                 <span class="{% if diff >= 0 %}text-success{% else %}text-danger{% endif %}">
                                     R$ {{ "%.2f"|format(diff) }}
                                 </span>

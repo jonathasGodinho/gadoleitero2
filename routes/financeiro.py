@@ -39,7 +39,11 @@ def excluir_despesa(id):
 def financeiro():
     if request.method == 'POST':
         descricao = request.form.get('descricao')
-        valor = float(request.form.get('valor'))
+        try:
+            valor = float(request.form.get('valor'))
+        except (ValueError, TypeError):
+            flash('Valor inválido', 'danger')
+            return redirect(url_for('financeiro.financeiro'))
         categoria = request.form.get('categoria')
         data = datetime.strptime(request.form.get('data'), '%Y-%m-%d').date()
         observacoes = request.form.get('observacoes')
@@ -94,8 +98,8 @@ def orcamento():
         return redirect(url_for('financeiro.orcamento'))
 
     orcamentos = Orcamento.query.order_by(Orcamento.ano.desc(), Orcamento.mes).all()
-    total_previsto = sum(o.valor_previsto for o in orcamentos)
-    total_realizado = sum(o.valor_realizado for o in orcamentos)
+    total_previsto = sum(o.valor_previsto or 0 for o in orcamentos)
+    total_realizado = sum(o.valor_realizado or 0 for o in orcamentos)
 
     return render_template('orcamento.html',
                           orcamentos=orcamentos,

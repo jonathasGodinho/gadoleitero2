@@ -34,6 +34,10 @@ def excluir_racao(id):
         flash('Acesso restrito', 'danger')
         return redirect(url_for('racao.racao'))
     tipo = TipoRacao.query.get_or_404(id)
+    consumos = ConsumoRacao.query.filter_by(tipo_racao_id=id).all()
+    if consumos:
+        flash('Não é possível excluir: esta ração possui registros de consumo vinculados', 'danger')
+        return redirect(url_for('racao.racao'))
     db.session.delete(tipo)
     db.session.commit()
     log_auditoria('Tipo ração excluído', f'{tipo.nome}')
@@ -61,7 +65,11 @@ def consumo_racao():
     if request.method == 'POST':
         animal_id = request.form.get('animal_id')
         tipo_racao_id = request.form.get('tipo_racao_id')
-        quantidade_kg = float(request.form.get('quantidade_kg'))
+        try:
+            quantidade_kg = float(request.form.get('quantidade_kg'))
+        except (ValueError, TypeError):
+            flash('Quantidade inválida', 'danger')
+            return redirect(url_for('racao.consumo_racao'))
         data = datetime.strptime(request.form.get('data'), '%Y-%m-%d').date()
 
         tipo = TipoRacao.query.get(tipo_racao_id)
