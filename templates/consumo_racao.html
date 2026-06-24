@@ -12,6 +12,7 @@
             </div>
             <div class="card-body">
                 <form method="POST">
+                    {{ csrf_token_input|safe }}
                     <div class="mb-3">
                         <label class="form-label">Animal</label>
                         <select name="animal_id" class="form-select" required>

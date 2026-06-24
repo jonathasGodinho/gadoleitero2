@@ -12,6 +12,7 @@
             </div>
             <div class="card-body">
                 <form method="POST" action="/ajustes/preco" class="mb-4">
+                    {{ csrf_token_input|safe }}
                     <div class="mb-3">
                         <label class="form-label">Novo Preço por Litro (R$)</label>
                         <input type="number" step="0.0001" name="preco_litro" class="form-control" required>
@@ -62,6 +63,7 @@
                 <p class="text-muted">Cuidado: esta ação não pode ser desfeita.</p>
                 
                 <form method="POST" action="/ajustes/reset" class="mb-3">
+                    {{ csrf_token_input|safe }}
                     <input type="hidden" name="tipo" value="producao">
                     <button type="submit" class="btn btn-outline-danger w-100 mb-2" onclick="return confirm('Tem certeza que deseja limpar todos os dados de produção?')">
                         🗑️ Limpar Dados de Produção
@@ -69,6 +71,7 @@
                 </form>
                 
                 <form method="POST" action="/ajustes/reset" class="mb-3">
+                    {{ csrf_token_input|safe }}
                     <input type="hidden" name="tipo" value="racao">
                     <button type="submit" class="btn btn-outline-danger w-100 mb-2" onclick="return confirm('Tem certeza que deseja limpar todos os dados de ração?')">
                         🗑️ Limpar Dados de Ração
@@ -76,6 +79,7 @@
                 </form>
                 
                 <form method="POST" action="/ajustes/reset">
+                    {{ csrf_token_input|safe }}
                     <input type="hidden" name="tipo" value="todos">
                     <button type="submit" class="btn btn-danger w-100" onclick="return confirm('ATENÇÃO: Isso excluirá TODOS os dados (animais, rações, produção). Tem certeza?')">
                         ⚠️ Limpar Todos os Dados
@@ -104,6 +108,7 @@
                 <p class="text-muted">Selecione um backup para restaurar os dados. Isso substituirá todos os dados atuais.</p>
                 {% if backups %}
                 <form method="POST" action="/ajustes/restaurar" onsubmit="return confirm('ATENÇÃO: Isso substituirá TODOS os dados atuais pelos do backup. Tem certeza?')">
+                    {{ csrf_token_input|safe }}
                     <div class="mb-3">
                         <select name="filename" class="form-select" required>
                             <option value="">-- Selecione um backup --</option>

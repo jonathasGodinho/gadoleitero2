@@ -13,6 +13,7 @@
                 <p class="card-text">Gera um arquivo JSON com todos os registros do banco e salva na pasta de backups. Você pode baixá-lo ou restaurá-lo depois em Ajustes.</p>
                 <div class="mt-auto">
                     <form method="POST" action="/admin/backup/criar">
+                        {{ csrf_token_input|safe }}
                         <button type="submit" class="btn btn-success">📦 Criar Backup Agora</button>
                     </form>
                 </div>

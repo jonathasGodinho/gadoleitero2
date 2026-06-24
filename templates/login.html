@@ -142,6 +142,7 @@
                 {% endif %}
             {% endwith %}
             <form method="POST">
+                {{ csrf_token_input|safe }}
                 <div class="mb-3">
                     <label class="form-label" style="color: var(--text-primary); font-weight: 600;">Email</label>
                     <input type="email" name="email" class="form-control" required autofocus>

@@ -12,6 +12,7 @@
             </div>
             <div class="card-body">
                 <form method="POST">
+                    {{ csrf_token_input|safe }}
                     <input type="hidden" name="acao" value="cliente">
                     <div class="mb-3">
                         <label class="form-label">Nome</label>
@@ -31,6 +32,7 @@
             </div>
             <div class="card-body">
                 <form method="POST">
+                    {{ csrf_token_input|safe }}
                     <input type="hidden" name="acao" value="venda">
                     <div class="mb-3">
                         <label class="form-label">Cliente</label>
@@ -172,6 +174,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="/vendas-avulsas/editar/{{ venda.id }}">
+                    {{ csrf_token_input|safe }}
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Cliente</label>

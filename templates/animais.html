@@ -12,6 +12,7 @@
             </div>
             <div class="card-body">
                 <form method="POST">
+                    {{ csrf_token_input|safe }}
                     <div class="mb-3">
                         <label class="form-label">Nome</label>
                         <input type="text" name="nome" class="form-control" required>
@@ -97,6 +98,7 @@
                                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                         </div>
                                         <form method="POST" action="/animais/editar/{{ animal.id }}">
+                                                    {{ csrf_token_input|safe }}
                                             <div class="modal-body">
                                                 <div class="mb-2">
                                                     <label class="form-label">Nome</label>

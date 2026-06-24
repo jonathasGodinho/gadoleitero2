@@ -12,6 +12,7 @@
             </div>
             <div class="card-body">
                 <form method="POST" action="/producao/editar/{{ producao.id }}">
+                    {{ csrf_token_input|safe }}
                     <div class="mb-3">
                         <label class="form-label">Data</label>
                         <input type="date" name="data" class="form-control" value="{{ producao.data.strftime('%Y-%m-%d') }}" required>

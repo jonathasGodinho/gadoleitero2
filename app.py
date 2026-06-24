@@ -5,15 +5,20 @@ from flask import Flask, render_template, request, redirect, url_for, flash, sen
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_migrate import Migrate
+from flask_wtf.csrf import CSRFProtect, generate_csrf
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from datetime import datetime, date, timedelta
 from io import BytesIO
 import calendar
 import os
+import secrets
+import re
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
-app.secret_key = os.environ.get('SECRET_KEY', 'terra-roxa-sistema-2024')
+app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
 
 # Configuração de banco: PostgreSQL (produção) ou SQLite (desenvolvimento)
 database_url = os.environ.get('DATABASE_URL')
@@ -31,6 +36,15 @@ if os.environ.get('RENDER') or os.environ.get('FLASK_ENV') == 'production':
     app.config['SESSION_COOKIE_HTTPONLY'] = True
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
     app.config['JSON_AS_ASCII'] = False
+
+csrf = CSRFProtect(app)
+
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://"
+)
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
@@ -172,7 +186,12 @@ def inject_cotacao():
         SaudeAnimal.proxima_dose <= hoje + timedelta(days=7),
         SaudeAnimal.proxima_dose >= hoje
     ).count()
-    return dict(preco_vigente_global=preco, data_cotacao_global=data_fmt, qtd_alertas_saude=alertas, date=date)
+    csrf_input = f'<input type="hidden" name="csrf_token" value="{generate_csrf()}">'
+    return dict(
+        preco_vigente_global=preco, data_cotacao_global=data_fmt,
+        qtd_alertas_saude=alertas, date=date,
+        csrf_token_input=csrf_input
+    )
 
 def log_auditoria(acao, detalhes='', user_id=None):
     if user_id is None and current_user.is_authenticated:
@@ -272,6 +291,7 @@ def health():
     return {'status': 'ok'}, 200
 
 @app.route('/api/clima')
+@csrf.exempt
 def api_clima():
     import requests
     WMO_CODES = {
@@ -311,10 +331,12 @@ def api_clima():
             'location': 'Santo Antônio do Matupi - AM',
             'feels_like': data['apparent_temperature']
         }
-    except:
+    except Exception as e:
+        app.logger.error(f'Erro ao buscar clima: {e}')
         return {'temp': 25, 'description': 'ensolarado', 'humidity': 60, 'icon': '01d', 'location': 'Santo Antônio do Matupi - AM', 'feels_like': 24}
 
 @app.route('/api/atualizar-preco', methods=['POST'])
+@csrf.exempt
 @login_required
 def atualizar_preco():
     try:
@@ -342,6 +364,7 @@ def atualizar_preco():
         return {'success': False, 'error': str(e)}
 
 @app.route('/api/cotacao-leite')
+@csrf.exempt
 def api_cotacao_leite():
     try:
         hoje = date.today()
@@ -359,6 +382,7 @@ def api_cotacao_leite():
             'tendencia': tendencia
         }
     except Exception as e:
+        app.logger.error(f'Erro ao buscar cotação: {e}')
         return {'preco': 2.50, 'data': date.today().strftime('%d/%m/%Y'), 'tendencia': 'estavel'}
 
 @app.route('/')
@@ -863,6 +887,7 @@ def cooperativas():
     return render_template('cooperativas.html', cooperativas=cooperativas_info)
 
 @app.route('/login', methods=['GET', 'POST'])
+@limiter.limit("10 per minute")
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
@@ -884,8 +909,10 @@ def login():
     return render_template('login.html')
 
 @app.route('/register', methods=['GET', 'POST'])
+@login_required
 def register():
-    if current_user.is_authenticated:
+    if current_user.role != 'admin':
+        flash('Acesso restrito a administradores', 'danger')
         return redirect(url_for('index'))
     if request.method == 'POST':
         email = request.form.get('email')
@@ -1001,7 +1028,7 @@ def excluir_producao(id):
     if current_user.role not in ['admin', 'gerente']:
         flash('Acesso restrito', 'danger')
         return redirect(url_for('producao'))
-    producao = ProducaoLeite.query.get(id)
+    producao = ProducaoLeite.query.get_or_404(id)
     db.session.delete(producao)
     db.session.commit()
     log_auditoria('Produção excluída', f'ID {id}')
@@ -1181,6 +1208,9 @@ def racao():
 @app.route('/racao/excluir/<int:id>')
 @login_required
 def excluir_racao(id):
+    if current_user.role not in ['admin', 'gerente']:
+        flash('Acesso restrito', 'danger')
+        return redirect(url_for('racao'))
     tipo = TipoRacao.query.get_or_404(id)
     db.session.delete(tipo)
     db.session.commit()
@@ -1191,6 +1221,9 @@ def excluir_racao(id):
 @app.route('/racao/consumo/excluir/<int:id>')
 @login_required
 def excluir_consumo_racao(id):
+    if current_user.role not in ['admin', 'gerente']:
+        flash('Acesso restrito', 'danger')
+        return redirect(url_for('consumo_racao'))
     consumo = ConsumoRacao.query.get_or_404(id)
     db.session.delete(consumo)
     db.session.commit()
@@ -1287,6 +1320,9 @@ def editar_animal(id):
 @app.route('/animais/excluir/<int:id>')
 @login_required
 def excluir_animal(id):
+    if current_user.role not in ['admin', 'gerente']:
+        flash('Acesso restrito', 'danger')
+        return redirect(url_for('animais'))
     animal = Animal.query.get_or_404(id)
     try:
         SaudeAnimal.query.filter_by(animal_id=id).delete()
@@ -1332,6 +1368,9 @@ def saude_animal(id):
 @app.route('/saude/excluir/<int:id>')
 @login_required
 def excluir_saude(id):
+    if current_user.role not in ['admin', 'gerente']:
+        flash('Acesso restrito', 'danger')
+        return redirect(url_for('index'))
     registro = SaudeAnimal.query.get_or_404(id)
     animal_id = registro.animal_id
     db.session.delete(registro)
@@ -1828,6 +1867,9 @@ def restaurar_backup():
         flash('Nenhum arquivo selecionado', 'danger')
         return redirect(url_for('ajustes'))
 
+    if not re.match(r'^[\w\-\.]+$', filename):
+        flash('Nome de arquivo inválido', 'danger')
+        return redirect(url_for('ajustes'))
     from backup_util import restore_backup, BACKUP_DIR
     filepath = BACKUP_DIR / filename
     if not filepath.exists():
@@ -2051,7 +2093,7 @@ def editar_venda_avulsa(id):
 @app.route('/vendas-avulsas/excluir/<int:id>')
 @login_required
 def excluir_venda_avulsa(id):
-    venda = VendaAvulsa.query.get(id)
+    venda = VendaAvulsa.query.get_or_404(id)
     db.session.delete(venda)
     db.session.commit()
     flash('Venda excluída!', 'success')
