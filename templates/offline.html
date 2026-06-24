@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Offline - Terra Roxa System{% endblock %}
+{% block page_title %}Sem Conexão{% endblock %}
+{% block content %}
+<div class="row justify-content-center mt-5">
+  <div class="col-md-6 text-center">
+    <div class="card p-5">
+      <div style="font-size: 5rem; line-height: 1;">📡</div>
+      <h3 class="mt-4">Você está offline</h3>
+      <p class="text-muted mb-4">
+        O Terra Roxa System está funcionando em modo limitado.
+        Os dados em cache ainda estão disponíveis, mas algumas funcionalidades
+        podem não funcionar até a conexão ser restabelecida.
+      </p>
+      <div class="d-flex justify-content-center gap-3 flex-wrap">
+        <a href="/" class="btn btn-primary">📊 Painel</a>
+        <a href="/producao" class="btn btn-outline-primary">🥛 Produção</a>
+        <a href="/animais" class="btn btn-outline-primary">🐂 Animais</a>
+        <a href="/racao" class="btn btn-outline-primary">🌾 Ração</a>
+        <a href="/relatorios" class="btn btn-outline-primary">📈 Relatórios</a>
+      </div>
+      <hr class="my-4">
+      <p class="small text-muted">
+        🔄 Tentando reconectar automaticamente...
+      </p>
+      <button class="btn btn-sm btn-outline-secondary" onclick="location.reload()">
+        Tentar novamente
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  function checkConnection() {
+    if (navigator.onLine) {
+      location.reload();
+    }
+  }
+  window.addEventListener('online', checkConnection);
+  setInterval(checkConnection, 10000);
+});
+</script>
+{% endblock %}

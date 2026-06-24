@@ -4,7 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Terra Roxa System{% endblock %}</title>
+    <link rel="manifest" href="/static/manifest.json">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐄</text></svg>">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Terra Roxa">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#2D6A4F">
+    <meta name="application-name" content="Terra Roxa System">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
@@ -563,7 +570,16 @@ body.dark-mode.page-relatorios,
     </div>
     
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
-     
+    
+    <!-- PWA Update Banner -->
+    <div id="pwa-update-banner" class="alert alert-info alert-dismissible fade show text-center mb-0 rounded-0" style="display:none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999;">
+        <div class="d-flex justify-content-center align-items-center gap-3 flex-wrap">
+            <span>📲 <strong>Nova versão disponível!</strong> Atualize para a versão mais recente.</span>
+            <button class="btn btn-sm btn-primary btn-update">Atualizar agora</button>
+            <button class="btn btn-sm btn-outline-secondary btn-dismiss">Agora não</button>
+        </div>
+    </div>
+    
     <div class="container-fluid">
         <div class="row">
     <div class="col-md-2 sidebar p-0" id="sidebar">
@@ -639,13 +655,18 @@ body.dark-mode.page-relatorios,
                 <span class="nav-icon">🌙</span>
                 <span class="sidebar-text">Modo Escuro</span>
             </button>
+            <a class="nav-link" href="#" id="installPWA" data-bs-toggle="tooltip" data-bs-placement="right" title="Instalar App">
+                <span class="nav-icon">📲</span>
+                <span class="sidebar-text">Instalar App</span>
+            </a>
             <a class="nav-link" href="/logout" data-bs-toggle="tooltip" data-bs-placement="right" title="Sair">
                 <span class="nav-icon">🚪</span>
                 <span class="sidebar-text">Sair</span>
             </a>
         </nav>
         <div class="mt-auto p-3 text-center sidebar-text" style="font-size: 0.7rem; color: rgba(255,255,255,0.3);">
-            v1.0 • Terra Roxa © 2026
+            <span id="online-indicator" class="badge bg-success mb-2">🟢 Online</span><br>
+            v1.0 PWA • Terra Roxa © 2026
         </div>
     </div>
             <div class="col-md-10 p-0">
@@ -739,77 +760,206 @@ body.dark-mode.page-relatorios,
     </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        // Register Service Worker for PWA
+        // PWA - Service Worker Registration
         if ('serviceWorker' in navigator) {
+            let swRegistration = null;
+            
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/static/sw.js')
                     .then(registration => {
-                        console.log('SW registered:', registration);
+                        swRegistration = registration;
+                        console.log('📲 SW registrado:', registration);
+                        
+                        if (registration.waiting) {
+                            showUpdateBanner(registration);
+                        }
+                        
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    showUpdateBanner(registration);
+                                }
+                            });
+                        });
                     })
                     .catch(error => {
                         console.log('SW registration failed:', error);
                     });
+                
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    window.location.reload();
+                });
+            });
+            
+            function showUpdateBanner(registration) {
+                const banner = document.getElementById('pwa-update-banner');
+                if (banner) {
+                    banner.style.display = 'block';
+                    banner.querySelector('.btn-update').addEventListener('click', () => {
+                        if (registration.waiting) {
+                            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+                        }
+                    });
+                    banner.querySelector('.btn-dismiss').addEventListener('click', () => {
+                        banner.style.display = 'none';
+                    });
+                }
+            }
+        }
+        
+        // PWA - Install Prompt
+        let deferredPrompt = null;
+        const installBtn = document.getElementById('installPWA');
+        
+        if (installBtn) {
+            installBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const result = await deferredPrompt.userChoice;
+                    console.log('📲 Install result:', result.outcome);
+                    deferredPrompt = null;
+                    if (result.outcome === 'accepted') {
+                        installBtn.style.display = 'none';
+                    }
+                } else if (navigator.userAgent.includes('Mobile')) {
+                    showOfflineToast('📲 No seu navegador, use o menu "Adicionar à tela inicial"');
+                } else {
+                    showOfflineToast('📲 Use o ícone de instalação na barra de endereços ou menu do navegador');
+                }
             });
         }
         
-        document.addEventListener('DOMContentLoaded', function() {
-            const sidebar = document.getElementById('sidebar');
-            const sidebarOverlay = document.getElementById('sidebarOverlay');
-            const sidebarToggle = document.getElementById('sidebarToggle');
-            const darkModeToggle = document.getElementById('darkModeToggle');
-            const darkModeToggleSidebar = document.getElementById('darkModeToggleSidebar');
-            
-            // Dark Mode toggle
-            function toggleDarkMode() {
-                document.body.classList.toggle('dark-mode');
-                const isDarkMode = document.body.classList.contains('dark-mode');
-                localStorage.setItem('darkMode', isDarkMode);
-                if (darkModeToggleSidebar) {
-                    darkModeToggleSidebar.innerHTML = isDarkMode ? '☀️ Modo Claro' : '🌙 Modo Escuro';
-                }
-            }
-            
-            // Load dark mode preference
-            if (localStorage.getItem('darkMode') === 'true') {
-                document.body.classList.add('dark-mode');
-                if (darkModeToggleSidebar) {
-                    darkModeToggleSidebar.innerHTML = '☀️ Modo Claro';
-                }
-            }
-            
-            if (darkModeToggle) {
-                darkModeToggle.addEventListener('click', toggleDarkMode);
-            }
-            if (darkModeToggleSidebar) {
-                darkModeToggleSidebar.addEventListener('click', toggleDarkMode);
-            }
-            
-            if (sidebarToggle) {
-                sidebarToggle.addEventListener('click', function() {
-                    sidebar.classList.toggle('show');
-                    sidebarOverlay.classList.toggle('show');
-                });
-            }
-            
-            if (sidebarOverlay) {
-                sidebarOverlay.addEventListener('click', function() {
-                    sidebar.classList.remove('show');
-                    sidebarOverlay.classList.remove('show');
-                });
-            }
-            
-            const sidebarLinks = sidebar.querySelectorAll('.nav-link');
-            sidebarLinks.forEach(link => {
-                link.addEventListener('click', function() {
-                    if (window.innerWidth < 768) {
-                        sidebar.classList.remove('show');
-                        sidebarOverlay.classList.remove('show');
-                    }
-                });
-            });
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            console.log('📲 PWA pronto para instalar');
         });
         
-
+        window.addEventListener('appinstalled', () => {
+            console.log('📲 App instalado com sucesso!');
+            if (installBtn) installBtn.style.display = 'none';
+            deferredPrompt = null;
+        });
+        
+        // PWA - Online/Offline detection
+        function updateOnlineStatus() {
+            const indicator = document.getElementById('online-indicator');
+            if (navigator.onLine) {
+                if (indicator) {
+                    indicator.innerHTML = '🟢 Online';
+                    indicator.className = 'badge bg-success';
+                }
+            } else {
+                if (indicator) {
+                    indicator.innerHTML = '🔴 Offline';
+                    indicator.className = 'badge bg-danger';
+                }
+            }
+        }
+        
+        window.addEventListener('online', () => {
+            updateOnlineStatus();
+            flushOfflineQueue();
+        });
+        window.addEventListener('offline', updateOnlineStatus);
+        
+        // Offline Queue - save form submissions when offline
+        function getOfflineQueue() {
+            try {
+                return JSON.parse(localStorage.getItem('offlineQueue') || '[]');
+            } catch { return []; }
+        }
+        
+        function addToOfflineQueue(data) {
+            const queue = getOfflineQueue();
+            queue.push({ ...data, _queuedAt: new Date().toISOString() });
+            localStorage.setItem('offlineQueue', JSON.stringify(queue));
+            showOfflineToast('📝 Dado salvo offline. Será enviado quando houver conexão.');
+        }
+        
+        function removeFromOfflineQueue(index) {
+            const queue = getOfflineQueue();
+            queue.splice(index, 1);
+            localStorage.setItem('offlineQueue', JSON.stringify(queue));
+        }
+        
+        async function flushOfflineQueue() {
+            const queue = getOfflineQueue();
+            if (queue.length === 0) return;
+            
+            const pending = document.getElementById('pending-sync');
+            if (pending) {
+                pending.textContent = `🔄 Sincronizando ${queue.length} item(ns)...`;
+                pending.style.display = '';
+            }
+            
+            let success = 0;
+            for (let i = queue.length - 1; i >= 0; i--) {
+                try {
+                    const item = queue[i];
+                    const resp = await fetch(item.url, {
+                        method: item.method || 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: item.body,
+                    });
+                    if (resp.ok || resp.redirected) {
+                        removeFromOfflineQueue(i);
+                        success++;
+                    }
+                } catch (e) {
+                    console.log('Sync failed for item:', i, e);
+                }
+            }
+            
+            if (pending) pending.style.display = 'none';
+            if (success > 0) {
+                showOfflineToast(`✅ ${success} registro(s) sincronizado(s) com sucesso!`);
+                if (queue.length - success === 0) {
+                    setTimeout(() => location.reload(), 1500);
+                }
+            }
+        }
+        
+        function interceptFormSubmit(form) {
+            form.addEventListener('submit', function(e) {
+                if (!navigator.onLine) {
+                    e.preventDefault();
+                    const formData = new FormData(form);
+                    const params = new URLSearchParams();
+                    for (const [k, v] of formData) params.append(k, v);
+                    addToOfflineQueue({
+                        url: form.action || window.location.href,
+                        method: form.method || 'POST',
+                        body: params.toString(),
+                    });
+                }
+            });
+        }
+        
+        function showOfflineToast(msg) {
+            const container = document.getElementById('toast-container') || (() => {
+                const el = document.createElement('div');
+                el.id = 'toast-container';
+                el.style.cssText = 'position:fixed;top:80px;right:20px;z-index:9999;max-width:400px;';
+                document.body.appendChild(el);
+                return el;
+            })();
+            const toast = document.createElement('div');
+            toast.className = 'alert alert-info alert-dismissible fade show shadow';
+            toast.innerHTML = `${msg} <button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 5000);
+        }
+        
+        // Intercept all forms for offline queue
+        document.querySelectorAll('form').forEach(interceptFormSubmit);
+        
+        // Flush queue on page load if online
+        if (navigator.onLine) flushOfflineQueue();
+        
+    
     </script>
     {% block extra_js %}{% endblock %}
 </body>

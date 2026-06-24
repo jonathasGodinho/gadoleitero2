@@ -1,33 +1,80 @@
 {
-  "name": "Terra Roxa System",
+  "name": "Terra Roxa System - Gestão de Fazenda Leiteira",
   "short_name": "Terra Roxa",
-  "description": "Sistema Completo de Gestão de Fazenda Leiteira",
-  "start_url": "/login",
+  "description": "Sistema completo de gestão de produção leiteira. Controle de produção, ração, animais, finanças e vendas.",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#27AE60",
-  "theme_color": "#2C3E50",
+  "background_color": "#1B4332",
+  "theme_color": "#2D6A4F",
+  "orientation": "any",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "categories": ["business", "agriculture", "productivity"],
+  "prefer_related_applications": false,
   "icons": [
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐄</text></svg>",
-      "sizes": "any",
-      "type": "image/svg+xml"
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='64' fill='%232D6A4F'/%3E%3Ctext x='256' y='380' font-size='350' text-anchor='middle' fill='white'%3E🐄%3C/text%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='24' fill='%232D6A4F'/%3E%3Ctext x='96' y='142' font-size='130' text-anchor='middle' fill='white'%3E🐄%3C/text%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 144 144'%3E%3Crect width='144' height='144' rx='18' fill='%232D6A4F'/%3E%3Ctext x='72' y='108' font-size='100' text-anchor='middle' fill='white'%3E🐄%3C/text%3E%3C/svg%3E",
+      "sizes": "144x144",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' rx='12' fill='%232D6A4F'/%3E%3Ctext x='48' y='72' font-size='70' text-anchor='middle' fill='white'%3E🐄%3C/text%3E%3C/svg%3E",
+      "sizes": "96x96",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 72'%3E%3Crect width='72' height='72' rx='9' fill='%232D6A4F'/%3E%3Ctext x='36' y='54' font-size='50' text-anchor='middle' fill='white'%3E🐄%3C/text%3E%3C/svg%3E",
+      "sizes": "72x72",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='6' fill='%232D6A4F'/%3E%3Ctext x='24' y='36' font-size='34' text-anchor='middle' fill='white'%3E🐄%3C/text%3E%3C/svg%3E",
+      "sizes": "48x48",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ],
   "screenshots": [],
-  "categories": ["business", "agriculture"],
-  "lang": "pt-BR",
-  "dir": "ltr",
-  "orientation": "any",
-  "icons": [
+  "shortcuts": [
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><text y='160' font-size='160'>🐄</text></svg>",
-      "sizes": "192x192",
-      "type": "image/svg+xml"
+      "name": "Dashboard",
+      "short_name": "Painel",
+      "url": "/",
+      "description": "Visão geral da fazenda"
     },
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><text y='460' font-size='400'>🐄</text></svg>",
-      "sizes": "512x512",
-      "type": "image/svg+xml"
+      "name": "Registrar Produção",
+      "short_name": "Produção",
+      "url": "/producao",
+      "description": "Registrar produção de leite"
+    },
+    {
+      "name": "Registrar Consumo",
+      "short_name": "Ração",
+      "url": "/racao/consumo",
+      "description": "Registrar consumo de ração"
+    },
+    {
+      "name": "Vendas Avulsas",
+      "short_name": "Vendas",
+      "url": "/vendas-avulsas",
+      "description": "Registrar vendas"
     }
   ]
 }

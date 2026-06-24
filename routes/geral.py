@@ -8,6 +8,11 @@ from collections import defaultdict
 
 geral_bp = Blueprint('geral', __name__)
 
+@geral_bp.route('/offline')
+@login_required
+def offline():
+    return render_template('offline.html')
+
 @geral_bp.route('/')
 @login_required
 def index():
