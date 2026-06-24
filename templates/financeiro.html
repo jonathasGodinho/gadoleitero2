@@ -29,6 +29,7 @@
                         <th>Categoria</th>
                         <th>Valor</th>
                         <th>Data</th>
+                        <th>Observações</th>
                         <th>Ações</th>
                     </tr>
                 </thead>
@@ -39,13 +40,15 @@
                         <td><span class="badge bg-info">{{ d.categoria }}</span></td>
                         <td>R$ {{ "%.2f"|format(d.valor) }}</td>
                         <td>{{ d.data.strftime('%d/%m/%Y') }}</td>
+                        <td>{{ d.observacoes or '-' }}</td>
                         <td>
                             <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editarDespesaModal"
                                 data-id="{{ d.id }}"
                                 data-descricao="{{ d.descricao }}"
                                 data-categoria="{{ d.categoria }}"
                                 data-valor="{{ d.valor }}"
-                                data-data="{{ d.data.strftime('%Y-%m-%d') }}">✎</button>
+                                data-data="{{ d.data.strftime('%Y-%m-%d') }}"
+                                data-observacoes="{{ d.observacoes or '' }}">✎</button>
                             <a href="/financeiro/excluir/{{ d.id }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Excluir despesa?')">✕</a>
                         </td>
                     </tr>
@@ -92,6 +95,10 @@
                         <label class="form-label">Data</label>
                         <input type="date" name="data" class="form-control" value="{{ today }}" required>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label">Observações</label>
+                        <textarea name="observacoes" class="form-control" rows="2" placeholder="Observações opcionais"></textarea>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -135,6 +142,10 @@
                         <label class="form-label">Data</label>
                         <input type="date" name="data" id="edit-data" class="form-control" required>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label">Observações</label>
+                        <textarea name="observacoes" id="edit-observacoes" class="form-control" rows="2"></textarea>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -154,9 +165,10 @@ document.addEventListener('DOMContentLoaded', function() {
         var btn = event.relatedTarget;
         document.getElementById('edit-descricao').value = btn.getAttribute('data-descricao');
         document.getElementById('edit-categoria').value = btn.getAttribute('data-categoria');
-        document.getElementById('edit-valor').value = btn.getAttribute('data-valor');
-        document.getElementById('edit-data').value = btn.getAttribute('data-data');
-        document.getElementById('editarDespesaForm').action = '/financeiro/editar/' + btn.getAttribute('data-id');
+                        document.getElementById('edit-valor').value = btn.getAttribute('data-valor');
+                        document.getElementById('edit-data').value = btn.getAttribute('data-data');
+                        document.getElementById('edit-observacoes').value = btn.getAttribute('data-observacoes') || '';
+                        document.getElementById('editarDespesaForm').action = '/financeiro/editar/' + btn.getAttribute('data-id');
     });
 });
 </script>

@@ -18,6 +18,18 @@
                         <label class="form-label">Nome</label>
                         <input type="text" name="nome" class="form-control" required>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label">Telefone</label>
+                        <input type="text" name="telefone" class="form-control" placeholder="(00) 00000-0000">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="email" class="form-control" placeholder="cliente@email.com">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Endereço</label>
+                        <input type="text" name="endereco" class="form-control" placeholder="Fazenda, município">
+                    </div>
                     <button type="submit" class="btn btn-primary">Salvar Cliente</button>
                 </form>
             </div>
@@ -73,6 +85,9 @@
                 <thead>
                     <tr>
                         <th>Nome</th>
+                        <th>Telefone</th>
+                        <th>Email</th>
+                        <th>Endereço</th>
                         <th>Ações</th>
                     </tr>
                 </thead>
@@ -80,13 +95,16 @@
                     {% for c in clientes %}
                     <tr>
                         <td>{{ c.nome }}</td>
+                        <td>{{ c.telefone or '-' }}</td>
+                        <td>{{ c.email or '-' }}</td>
+                        <td>{{ c.endereco or '-' }}</td>
                         <td>
                             <a href="/vendas-avulsas/excluir-cliente/{{ c.id }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Excluir cliente {{ c.nome }}?')">✕</a>
                         </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="2" class="text-center text-muted py-4">Nenhum cliente cadastrado</td>
+                        <td colspan="5" class="text-center text-muted py-4">Nenhum cliente cadastrado</td>
                     </tr>
                     {% endfor %}
                 </tbody>

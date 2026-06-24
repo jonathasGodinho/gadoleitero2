@@ -60,16 +60,16 @@ class User(UserMixin, db.Model):
     senha_hash = db.Column(db.String(500))
     is_admin = db.Column(db.Boolean, default=False)
     role = db.Column(db.String(50), default='operador')  # admin, gerente, operador, visualizador
-    ativo = db.Column(db.Boolean, default=True)
+    ativo = db.Column(db.Boolean, default=True, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class AuditLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
     acao = db.Column(db.String(200))
     detalhes = db.Column(db.Text)
     ip_address = db.Column(db.String(50))
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     user = db.relationship('User', backref='logs')
 
 class Animal(db.Model):
@@ -88,11 +88,11 @@ class Animal(db.Model):
 
 class SaudeAnimal(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    animal_id = db.Column(db.Integer, db.ForeignKey('animal.id'), nullable=False)
+    animal_id = db.Column(db.Integer, db.ForeignKey('animal.id'), nullable=False, index=True)
     tipo = db.Column(db.String(100))  # vacinação, vermifugação, doença, etc.
     descricao = db.Column(db.Text)
     data_aplicacao = db.Column(db.Date, nullable=False)
-    proxima_dose = db.Column(db.Date)
+    proxima_dose = db.Column(db.Date, index=True)
     custo = db.Column(db.Numeric(10, 2))
     observacoes = db.Column(db.Text)
     animal = db.relationship('Animal', backref='saude_registros')
@@ -107,23 +107,23 @@ class TipoRacao(db.Model):
 
 class ProducaoLeite(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    animal_id = db.Column(db.Integer, db.ForeignKey('animal.id'), nullable=True)
+    animal_id = db.Column(db.Integer, db.ForeignKey('animal.id'), nullable=True, index=True)
     litros = db.Column(db.Numeric(10, 2), nullable=False)
     gordura = db.Column(db.Numeric(5, 2))  # % gordura
     proteina = db.Column(db.Numeric(5, 2))  # % proteína
     ccs = db.Column(db.Numeric(10, 2))  # Contagem de Células Somáticas
     preco_venda = db.Column(db.Numeric(10, 4))
     total_receber = db.Column(db.Numeric(10, 2))
-    data = db.Column(db.Date, nullable=False)
+    data = db.Column(db.Date, nullable=False, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     animal = db.relationship('Animal', backref='producoes')
 
 class ConsumoRacao(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    animal_id = db.Column(db.Integer, db.ForeignKey('animal.id'), nullable=False)
-    tipo_racao_id = db.Column(db.Integer, db.ForeignKey('tipo_racao.id'), nullable=False)
+    animal_id = db.Column(db.Integer, db.ForeignKey('animal.id'), nullable=False, index=True)
+    tipo_racao_id = db.Column(db.Integer, db.ForeignKey('tipo_racao.id'), nullable=False, index=True)
     quantidade_kg = db.Column(db.Numeric(10, 2), nullable=False)
-    data = db.Column(db.Date, nullable=False)
+    data = db.Column(db.Date, nullable=False, index=True)
     custo = db.Column(db.Numeric(10, 2), nullable=False)
     eficiencia = db.Column(db.Numeric(10, 4))  # litros/kg ração
     animal = db.relationship('Animal', backref='consumos')
@@ -132,15 +132,15 @@ class ConsumoRacao(db.Model):
 class PrecoLeite(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     preco_litro = db.Column(db.Numeric(10, 4), nullable=False)
-    data_vigencia = db.Column(db.Date, nullable=False)
+    data_vigencia = db.Column(db.Date, nullable=False, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Despesa(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     descricao = db.Column(db.String(200), nullable=False)
     valor = db.Column(db.Numeric(10, 2), nullable=False)
-    categoria = db.Column(db.String(50))  # racao, energia, pessoal, veterinario, etc.
-    data = db.Column(db.Date, nullable=False)
+    categoria = db.Column(db.String(50), index=True)  # racao, energia, pessoal, veterinario, etc.
+    data = db.Column(db.Date, nullable=False, index=True)
     observacoes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -164,8 +164,8 @@ class Cliente(db.Model):
 
 class VendaAvulsa(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    cliente_id = db.Column(db.Integer, db.ForeignKey('cliente.id'), nullable=False)
-    data = db.Column(db.Date, nullable=False)
+    cliente_id = db.Column(db.Integer, db.ForeignKey('cliente.id'), nullable=False, index=True)
+    data = db.Column(db.Date, nullable=False, index=True)
     litros = db.Column(db.Numeric(10, 2), nullable=False)
     valor_litro = db.Column(db.Numeric(10, 4), nullable=False)
     total = db.Column(db.Numeric(10, 2), nullable=False)
@@ -953,15 +953,26 @@ def logout():
 @login_required
 def producao():
     if request.method == 'POST':
-        litros = float(request.form.get('litros'))
+        try:
+            litros = float(request.form.get('litros'))
+        except (ValueError, TypeError):
+            flash('Valor de litros inválido', 'danger')
+            return redirect(url_for('producao'))
         data = datetime.strptime(request.form.get('data'), '%Y-%m-%d').date()
-        preco_venda = float(request.form.get('preco_venda')) if request.form.get('preco_venda') else 2.20
+        try:
+            preco_venda = float(request.form.get('preco_venda') or 0)
+        except (ValueError, TypeError):
+            preco_venda = float(get_preco_vigente(data))
         total_receber = round(litros * preco_venda, 2)
+        gordura = float(request.form.get('gordura')) if request.form.get('gordura') else None
+        proteina = float(request.form.get('proteina')) if request.form.get('proteina') else None
+        ccs = float(request.form.get('ccs')) if request.form.get('ccs') else None
         
         nova_producao = ProducaoLeite(
             animal_id=None, litros=litros, data=data, 
             preco_venda=preco_venda,
-            total_receber=total_receber
+            total_receber=total_receber,
+            gordura=gordura, proteina=proteina, ccs=ccs
         )
         db.session.add(nova_producao)
         db.session.commit()
@@ -1001,7 +1012,7 @@ def producao():
     return render_template('producao.html', 
                            producoes=producoes, 
                            today=today,
-                           preco_padrao=2.20,
+                           preco_padrao=float(get_preco_vigente(hoje)),
                            total_litros_geral=total_litros_geral,
                            total_receber_geral=total_receber_geral,
                            data_ini=filtro_data_ini,
@@ -1290,9 +1301,15 @@ def animais():
         raca = request.form.get('raca')
         lote = request.form.get('lote')
         sexo = request.form.get('sexo')
+        status_reproducao = request.form.get('status_reproducao') or 'vazio'
+        data_ultima_inseminacao = datetime.strptime(request.form.get('data_ultima_inseminacao'), '%Y-%m-%d').date() if request.form.get('data_ultima_inseminacao') else None
+        data_parto_prevista = datetime.strptime(request.form.get('data_parto_prevista'), '%Y-%m-%d').date() if request.form.get('data_parto_prevista') else None
         novo_animal = Animal(
             nome=nome, brinco=brinco, raca=raca, lote=lote,
-            sexo=sexo
+            sexo=sexo,
+            status_reproducao=status_reproducao,
+            data_ultima_inseminacao=data_ultima_inseminacao,
+            data_parto_prevista=data_parto_prevista
         )
         db.session.add(novo_animal)
         db.session.commit()
@@ -1899,7 +1916,12 @@ def vendas_avulsas():
             if Cliente.query.filter_by(nome=nome).first():
                 flash('Cliente já cadastrado!', 'danger')
                 return redirect(url_for('vendas_avulsas'))
-            cliente = Cliente(nome=nome)
+            cliente = Cliente(
+                nome=nome,
+                telefone=request.form.get('telefone'),
+                email=request.form.get('email'),
+                endereco=request.form.get('endereco')
+            )
             db.session.add(cliente)
             db.session.commit()
             log_auditoria('Cliente cadastrado', f'{nome}')

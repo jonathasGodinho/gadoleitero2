@@ -25,6 +25,20 @@
                         <label class="form-label">Preço (R$/litro)</label>
                         <input type="number" step="0.01" name="preco_venda" id="input-preco" class="form-control" value="{{ preco_padrao }}" required>
                     </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-4">
+                            <label class="form-label">Gordura (%)</label>
+                            <input type="number" step="0.01" name="gordura" class="form-control" placeholder="Ex: 3.5">
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label">Proteína (%)</label>
+                            <input type="number" step="0.01" name="proteina" class="form-control" placeholder="Ex: 3.2">
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label">CCS (mil/mL)</label>
+                            <input type="number" step="0.01" name="ccs" class="form-control" placeholder="Ex: 200">
+                        </div>
+                    </div>
                     <div class="mb-3 p-3 bg-light rounded">
                         <label class="form-label text-muted">Total a Receber</label>
                         <h4 class="mb-0" id="total-receber-display">R$ 0,00</h4>
@@ -54,6 +68,9 @@
                             <tr>
                                 <th>Data</th>
                                 <th>Litros</th>
+                                <th>Gordura</th>
+                                <th>Proteína</th>
+                                <th>CCS</th>
                                 <th>Preço/L</th>
                                 <th>Total a Receber</th>
                                 <th>Ações</th>
@@ -64,6 +81,9 @@
                             <tr>
                                 <td>{{ p.data.strftime('%d/%m/%Y') }}</td>
                                 <td>{{ p.litros|int }} L</td>
+                                <td>{{ p.gordura and "%.1f%%"|format(p.gordura) or '-' }}</td>
+                                <td>{{ p.proteina and "%.1f%%"|format(p.proteina) or '-' }}</td>
+                                <td>{{ p.ccs and "%.0f"|format(p.ccs) or '-' }}</td>
                                 <td>R$ {{ "%.2f"|format(p.preco_venda) }}</td>
                                 <td>R$ {{ "%.2f"|format(p.total_receber) }}</td>
                                 <td>
@@ -73,7 +93,7 @@
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="5" class="text-center text-muted">Nenhuma produção registrada</td>
+                                <td colspan="8" class="text-center text-muted">Nenhuma produção registrada</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -82,6 +102,9 @@
                             <tr>
                                 <th>Total</th>
                                 <th>{{ total_litros_geral|int }} L</th>
+                                <th></th>
+                                <th></th>
+                                <th></th>
                                 <th></th>
                                 <th>R$ {{ "%.2f"|format(total_receber_geral) }}</th>
                                 <th></th>

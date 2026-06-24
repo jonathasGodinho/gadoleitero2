@@ -21,6 +21,14 @@
                         <label class="form-label">Preço por kg (R$)</label>
                         <input type="number" step="0.01" name="preco_kg" class="form-control" required>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tipo</label>
+                        <select name="tipo" class="form-select">
+                            <option value="concentrado">Concentrado</option>
+                            <option value="volumoso">Volumoso</option>
+                            <option value="suplementar">Suplementar</option>
+                        </select>
+                    </div>
                     <button type="submit" class="btn btn-primary w-100">Cadastrar</button>
                 </form>
             </div>
@@ -38,6 +46,7 @@
                             <tr>
                                 <th>ID</th>
                                 <th>Nome</th>
+                                <th>Tipo</th>
                                 <th>Preço/kg</th>
                                 <th>Ações</th>
                             </tr>
@@ -47,6 +56,7 @@
                             <tr>
                                 <td>{{ tipo.id }}</td>
                                 <td>{{ tipo.nome }}</td>
+                                <td><span class="badge bg-secondary">{{ tipo.tipo or 'concentrado' }}</span></td>
                                 <td>R$ {{ "%.2f"|format(tipo.preco_kg) }}</td>
                                 <td>
                                     <a href="/racao/excluir/{{ tipo.id }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Excluir tipo de ração?')">✕</a>
@@ -54,7 +64,7 @@
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="4" class="text-center text-muted py-4">Nenhum tipo de ração cadastrado</td>
+                                <td colspan="5" class="text-center text-muted py-4">Nenhum tipo de ração cadastrado</td>
                             </tr>
                             {% endfor %}
                         </tbody>

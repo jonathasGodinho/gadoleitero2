@@ -27,17 +27,36 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Sexo</label>
-                                                    <select name="sexo" class="form-select" required>
+                    <select name="sexo" class="form-select" required>
                         <option value="">Selecione...</option>
                         <option value="macho">♂️ Macho</option>
                         <option value="femea">♀️ Fêmea</option>
                     </select>
                 </div>
-                    <div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" name="ativo" id="ativo" checked>
-                        <label class="form-check-label" for="ativo">Animal ativo</label>
+                <div class="mb-3">
+                    <label class="form-label">Status Reprodução</label>
+                    <select name="status_reproducao" class="form-select">
+                        <option value="vazio">Vazio</option>
+                        <option value="prenha">Prenha</option>
+                        <option value="seca">Seca</option>
+                        <option value="lactacao">Lactação</option>
+                    </select>
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label">Última Inseminação</label>
+                        <input type="date" name="data_ultima_inseminacao" class="form-control">
                     </div>
-                    <button type="submit" class="btn btn-primary w-100">Cadastrar</button>
+                    <div class="col-6">
+                        <label class="form-label">Parto Previsto</label>
+                        <input type="date" name="data_parto_prevista" class="form-control">
+                    </div>
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" name="ativo" id="ativo" checked>
+                    <label class="form-check-label" for="ativo">Animal ativo</label>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Cadastrar</button>
                 </form>
             </div>
         </div>
