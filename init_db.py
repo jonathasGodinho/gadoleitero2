@@ -1,4 +1,5 @@
-from app import app, db, Animal, TipoRacao, PrecoLeite, ProducaoLeite, ConsumoRacao, Despesa, Cliente, VendaAvulsa, User
+from app import app, db
+from models import Animal, TipoRacao, PrecoLeite, ProducaoLeite, ConsumoRacao, Despesa, Cliente, VendaAvulsa, User
 from datetime import date, timedelta
 from werkzeug.security import generate_password_hash
 
