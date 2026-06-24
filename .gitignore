@@ -39,3 +39,5 @@ backups/
 
 # Netlify
 .netlify/
+
+flask_output.txt
