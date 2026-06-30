@@ -27,18 +27,10 @@ def animais():
         raca = request.form.get('raca')
         lote = request.form.get('lote')
         sexo = request.form.get('sexo')
-        status_reproducao = request.form.get('status_reproducao') or 'vazio'
-        data_nascimento = datetime.strptime(request.form.get('data_nascimento'), '%Y-%m-%d').date() if request.form.get('data_nascimento') else None
-        data_ultima_inseminacao = datetime.strptime(request.form.get('data_ultima_inseminacao'), '%Y-%m-%d').date() if request.form.get('data_ultima_inseminacao') else None
-        data_parto_prevista = datetime.strptime(request.form.get('data_parto_prevista'), '%Y-%m-%d').date() if request.form.get('data_parto_prevista') else None
         try:
             novo_animal = Animal(
                 nome=nome, brinco=brinco, raca=raca, lote=lote,
-                sexo=sexo,
-                status_reproducao=status_reproducao,
-                data_nascimento=data_nascimento,
-                data_ultima_inseminacao=data_ultima_inseminacao,
-                data_parto_prevista=data_parto_prevista
+                sexo=sexo
             )
             db.session.add(novo_animal)
             db.session.commit()
