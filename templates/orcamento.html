@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_pagination.html' import render_pagination %}
 {% block title %}Orçamento - Terra Roxa System{% endblock %}
 {% block page_title %}📊 Orçamento Anual{% endblock %}
 {% block content %}
@@ -80,6 +81,7 @@
                     </tbody>
                 </table>
             </div>
+            {{ render_pagination(paginator, 'financeiro.orcamento') }}
             {% else %}
             <p class="text-muted text-center py-4">Nenhum orçamento cadastrado ainda.</p>
             {% endif %}

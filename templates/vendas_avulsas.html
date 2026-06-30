@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_pagination.html' import render_pagination %}
 {% block title %}Vendas Avulsas - Terra Roxa System{% endblock %}
 {% block page_title %}📦 Vendas Avulsas{% endblock %}
 
@@ -141,6 +142,11 @@
         <span style="font-size: 1.2rem;">📄</span>
         <h5 class="mb-0 me-auto" style="font-size: 1rem; font-weight: 600;">Vendas Registradas</h5>
         <div class="d-flex gap-2">
+            <form method="GET" class="d-flex gap-2">
+                <input type="text" name="busca" class="form-control form-control-sm" placeholder="Buscar cliente..." value="{{ busca or '' }}">
+                <button type="submit" class="btn btn-sm btn-outline-primary">🔍</button>
+                {% if busca %}<a href="{{ url_for('vendas.vendas_avulsas') }}" class="btn btn-sm btn-outline-secondary">Limpar</a>{% endif %}
+            </form>
             <a href="/vendas-avulsas/exportar/pdf" class="btn btn-sm btn-outline-danger">📄 PDF</a>
             <a href="/vendas-avulsas/exportar/excel" class="btn btn-sm btn-outline-success">📊 Excel</a>
         </div>
@@ -180,6 +186,7 @@
                 </tbody>
             </table>
         </div>
+        {{ render_pagination(paginator, 'vendas.vendas_avulsas') }}
     </div>
 </div>
 

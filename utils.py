@@ -18,7 +18,10 @@ def log_auditoria(acao, detalhes='', user_id=None):
 
 def get_preco_vigente(data_ref):
     preco = PrecoLeite.query.filter(PrecoLeite.data_vigencia <= data_ref).order_by(PrecoLeite.data_vigencia.desc()).first()
-    return preco.preco_litro if preco else 0
+    if preco:
+        return preco.preco_litro
+    ultimo = PrecoLeite.query.order_by(PrecoLeite.data_vigencia.desc()).first()
+    return ultimo.preco_litro if ultimo else 2.50
 
 def calcular_eficiencia_alimentar(animal_id, data_ini, data_fim):
     producoes = ProducaoLeite.query.filter(

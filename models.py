@@ -28,6 +28,7 @@ class Animal(db.Model):
     raca = db.Column(db.String(100))
     sexo = db.Column(db.String(10))
     lote = db.Column(db.String(50))
+    data_nascimento = db.Column(db.Date)
     ativo = db.Column(db.Boolean, default=True)
     data_ultima_inseminacao = db.Column(db.Date)
     data_parto_prevista = db.Column(db.Date)
@@ -130,3 +131,23 @@ class BackupLog(db.Model):
     error_message = db.Column(db.Text)
     backup_type = db.Column(db.String(10), default='manual')
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+
+class Dieta(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    animal_id = db.Column(db.Integer, db.ForeignKey('animal.id'), nullable=False, index=True)
+    nome = db.Column(db.String(100), nullable=False)
+    data_inicio = db.Column(db.Date, nullable=False)
+    data_fim = db.Column(db.Date)
+    observacoes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    animal = db.relationship('Animal', backref='dietas')
+    itens = db.relationship('ItemDieta', backref='dieta', cascade='all, delete-orphan')
+
+
+class ItemDieta(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    dieta_id = db.Column(db.Integer, db.ForeignKey('dieta.id'), nullable=False, index=True)
+    tipo_racao_id = db.Column(db.Integer, db.ForeignKey('tipo_racao.id'), nullable=False, index=True)
+    quantidade_kg_por_dia = db.Column(db.Numeric(10, 2), nullable=False)
+    tipo_racao = db.relationship('TipoRacao', backref='itens_dieta')

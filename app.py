@@ -70,6 +70,7 @@ def create_app():
     from routes.relatorios import relatorios_bp
     from routes.vendas import vendas_bp
     from routes.admin import admin_bp
+    from routes.dieta import dieta_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(api_bp)
@@ -81,6 +82,29 @@ def create_app():
     app.register_blueprint(relatorios_bp)
     app.register_blueprint(vendas_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(dieta_bp)
+
+    @app.errorhandler(404)
+    def not_found(e):
+        return render_template('errors/404.html'), 404
+
+    @app.errorhandler(403)
+    def forbidden(e):
+        return render_template('errors/403.html'), 403
+
+    @app.errorhandler(500)
+    def server_error(e):
+        return render_template('errors/500.html'), 500
+
+    @app.after_request
+    def security_headers(response):
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'DENY'
+        response.headers['X-XSS-Protection'] = '1; mode=block'
+        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        if os.environ.get('RENDER') or os.environ.get('FLASK_ENV') == 'production':
+            response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        return response
 
     return app
 

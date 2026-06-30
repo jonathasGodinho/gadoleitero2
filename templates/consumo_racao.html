@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_pagination.html' import render_pagination %}
 
 {% block title %}Consumo de Ração - Terra Roxa System{% endblock %}
 {% block page_title %}🌾 Registro de Consumo de Ração{% endblock %}
@@ -82,6 +83,7 @@
                         </tbody>
                     </table>
                 </div>
+                {{ render_pagination(paginator, 'racao.consumo_racao') }}
             </div>
         </div>
     </div>

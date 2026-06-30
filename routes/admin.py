@@ -14,9 +14,11 @@ admin_bp = Blueprint('admin', __name__)
 @admin_bp.route('/ajustes')
 @login_required
 def ajustes():
+    page = request.args.get('page', 1, type=int)
     precos = PrecoLeite.query.order_by(PrecoLeite.data_vigencia.desc()).all()
-    backups = BackupLog.query.order_by(BackupLog.created_at.desc()).limit(50).all()
-    return render_template('ajustes.html', precos=precos, backups=backups)
+    backups_paginator = BackupLog.query.order_by(BackupLog.created_at.desc()).paginate(page=page, per_page=50, error_out=False)
+    backups = backups_paginator.items
+    return render_template('ajustes.html', precos=precos, backups=backups, paginator=backups_paginator)
 
 
 @admin_bp.route('/ajustes/preco', methods=['POST'])
@@ -193,8 +195,10 @@ def auditoria():
         flash('Acesso restrito', 'danger')
         return redirect(url_for('geral.index'))
 
-    logs = AuditLog.query.order_by(AuditLog.timestamp.desc()).limit(100).all()
-    return render_template('auditoria.html', logs=logs)
+    page = request.args.get('page', 1, type=int)
+    logs_paginator = AuditLog.query.order_by(AuditLog.timestamp.desc()).paginate(page=page, per_page=100, error_out=False)
+    logs = logs_paginator.items
+    return render_template('auditoria.html', logs=logs, paginator=logs_paginator)
 
 
 @admin_bp.route('/admin/backup')

@@ -6,6 +6,8 @@ from utils import log_auditoria, get_preco_vigente
 from datetime import datetime, date, timedelta
 from io import BytesIO
 import calendar
+from sqlalchemy import func as sa_func
+from validation import validate_positive, validate_date_range, validate_maxlen, validate_required
 
 producao_bp = Blueprint('producao', __name__)
 
@@ -14,31 +16,50 @@ producao_bp = Blueprint('producao', __name__)
 @login_required
 def producao():
     if request.method == 'POST':
-        try:
-            litros = float(request.form.get('litros'))
-        except (ValueError, TypeError):
-            flash('Valor de litros inválido', 'danger')
+        erro = validate_required(request.form.get('litros'), 'Litros')
+        if not erro:
+            erro = validate_positive(request.form.get('litros'), 'Litros')
+        if erro:
+            flash(erro, 'danger')
             return redirect(url_for('producao.producao'))
-        data = datetime.strptime(request.form.get('data'), '%Y-%m-%d').date()
+        litros = float(request.form.get('litros'))
+
+        animal_id = request.form.get('animal_id')
+        erro = validate_required(animal_id, 'Animal')
+        if erro:
+            flash(erro, 'danger')
+            return redirect(url_for('producao.producao'))
+        animal = Animal.query.get(int(animal_id))
+        if not animal or not animal.ativo:
+            flash('Animal inválido ou inativo', 'danger')
+            return redirect(url_for('producao.producao'))
+
+        data_str = request.form.get('data')
+        erro = validate_required(data_str, 'Data')
+        if not erro:
+            erro = validate_date_range(data_str)
+        if erro:
+            flash(erro, 'danger')
+            return redirect(url_for('producao.producao'))
+        data = datetime.strptime(data_str, '%Y-%m-%d').date()
         try:
             preco_venda = float(request.form.get('preco_venda') or 0)
         except (ValueError, TypeError):
             preco_venda = float(get_preco_vigente(data))
         total_receber = round(litros * preco_venda, 2)
-        gordura = float(request.form.get('gordura')) if request.form.get('gordura') else None
-        proteina = float(request.form.get('proteina')) if request.form.get('proteina') else None
-        ccs = float(request.form.get('ccs')) if request.form.get('ccs') else None
-        
         nova_producao = ProducaoLeite(
-            animal_id=None, litros=litros, data=data, 
+            animal_id=animal.id, litros=litros, data=data, 
             preco_venda=preco_venda,
-            total_receber=total_receber,
-            gordura=gordura, proteina=proteina, ccs=ccs
+            total_receber=total_receber
         )
-        db.session.add(nova_producao)
-        db.session.commit()
-        log_auditoria('Produção registrada', f'{litros}L a R$ {preco_venda}/L')
-        flash('Produção registrada com sucesso!', 'success')
+        try:
+            db.session.add(nova_producao)
+            db.session.commit()
+            log_auditoria('Produção registrada', f'{animal.nome} - {litros}L a R$ {preco_venda}/L')
+            flash('Produção registrada com sucesso!', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao registrar produção: {str(e)}', 'danger')
         return redirect(url_for('producao.producao'))
     
     hoje = date.today()
@@ -60,24 +81,34 @@ def producao():
         data_fim = ultimo_dia_mes
         filtro_data_fim = data_fim.strftime('%Y-%m-%d')
     
-    producoes = ProducaoLeite.query.filter(
+    busca = request.args.get('busca', '').strip()
+    producoes_query = ProducaoLeite.query.filter(
         ProducaoLeite.data >= data_ini,
         ProducaoLeite.data <= data_fim
-    ).order_by(ProducaoLeite.data.desc()).all()
+    )
+    if busca:
+        producoes_query = producoes_query.join(Animal).filter(Animal.nome.ilike(f'%{busca}%'))
+    page = request.args.get('page', 1, type=int)
+    producoes_paginator = producoes_query.order_by(ProducaoLeite.data.desc()).paginate(page=page, per_page=50, error_out=False)
+    producoes = producoes_paginator.items
+    
+    total_litros_geral = producoes_query.with_entities(sa_func.coalesce(sa_func.sum(ProducaoLeite.litros), 0)).scalar()
+    total_receber_geral = producoes_query.with_entities(sa_func.coalesce(sa_func.sum(ProducaoLeite.total_receber), 0)).scalar()
     
     today = hoje.strftime('%Y-%m-%d')
-    
-    total_litros_geral = sum(float(p.litros) for p in producoes)
-    total_receber_geral = sum(float(p.total_receber) for p in producoes if p.total_receber)
+    animais = Animal.query.filter_by(ativo=True).order_by(Animal.nome).all()
     
     return render_template('producao.html', 
-                           producoes=producoes, 
+                           producoes=producoes,
+                           paginator=producoes_paginator,
                            today=today,
+                           animais=animais,
                            preco_padrao=float(get_preco_vigente(hoje)),
                            total_litros_geral=total_litros_geral,
                            total_receber_geral=total_receber_geral,
                            data_ini=filtro_data_ini,
-                           data_fim=filtro_data_fim)
+                           data_fim=filtro_data_fim,
+                           busca=busca)
 
 
 @producao_bp.route('/producao/editar/<int:id>', methods=['GET', 'POST'])
@@ -85,15 +116,21 @@ def producao():
 def editar_producao(id):
     producao = ProducaoLeite.query.get_or_404(id)
     if request.method == 'POST':
-        producao.data = datetime.strptime(request.form.get('data'), '%Y-%m-%d').date()
-        producao.litros = float(request.form.get('litros'))
-        producao.preco_venda = float(request.form.get('preco_venda'))
-        producao.total_receber = round(producao.litros * producao.preco_venda, 2)
-        db.session.commit()
-        log_auditoria('Produção editada', f'{producao.litros}L a R$ {producao.preco_venda}/L')
-        flash('Produção atualizada!', 'success')
+        try:
+            producao.animal_id = int(request.form.get('animal_id'))
+            producao.data = datetime.strptime(request.form.get('data'), '%Y-%m-%d').date()
+            producao.litros = float(request.form.get('litros'))
+            producao.preco_venda = float(request.form.get('preco_venda'))
+            producao.total_receber = round(producao.litros * producao.preco_venda, 2)
+            db.session.commit()
+            log_auditoria('Produção editada', f'{producao.litros}L a R$ {producao.preco_venda}/L')
+            flash('Produção atualizada!', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao editar produção: {str(e)}', 'danger')
         return redirect(url_for('producao.producao'))
-    return render_template('editar_producao.html', producao=producao)
+    animais = Animal.query.filter_by(ativo=True).order_by(Animal.nome).all()
+    return render_template('editar_producao.html', producao=producao, animais=animais)
 
 
 @producao_bp.route('/producao/excluir/<int:id>')
@@ -103,10 +140,14 @@ def excluir_producao(id):
         flash('Acesso restrito', 'danger')
         return redirect(url_for('producao.producao'))
     producao = ProducaoLeite.query.get_or_404(id)
-    db.session.delete(producao)
-    db.session.commit()
-    log_auditoria('Produção excluída', f'ID {id}')
-    flash('Produção excluída!', 'success')
+    try:
+        db.session.delete(producao)
+        db.session.commit()
+        log_auditoria('Produção excluída', f'ID {id}')
+        flash('Produção excluída!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao excluir produção: {str(e)}', 'danger')
     return redirect(url_for('producao.producao'))
 
 

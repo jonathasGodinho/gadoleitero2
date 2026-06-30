@@ -4,6 +4,7 @@ from extensions import db
 from models import TipoRacao, ConsumoRacao, Animal, ProducaoLeite
 from utils import log_auditoria
 from datetime import datetime, date
+from validation import validate_required, validate_nome, validate_positive, validate_date_range
 
 racao_bp = Blueprint('racao', __name__)
 
@@ -13,14 +14,24 @@ racao_bp = Blueprint('racao', __name__)
 def racao():
     if request.method == 'POST':
         nome = request.form.get('nome')
+        erro = validate_nome(nome)
+        if not erro:
+            erro = validate_positive(request.form.get('preco_kg'), 'Preco por KG')
+        if erro:
+            flash(erro, 'danger')
+            return redirect(url_for('racao.racao'))
         preco_kg = float(request.form.get('preco_kg'))
         tipo = request.form.get('tipo', 'concentrado')
 
-        novo_tipo = TipoRacao(nome=nome, preco_kg=preco_kg, tipo=tipo)
-        db.session.add(novo_tipo)
-        db.session.commit()
-        log_auditoria('Tipo ração cadastrado', f'{nome} - R$ {preco_kg}/kg')
-        flash('Tipo de ração cadastrado!', 'success')
+        try:
+            novo_tipo = TipoRacao(nome=nome, preco_kg=preco_kg, tipo=tipo)
+            db.session.add(novo_tipo)
+            db.session.commit()
+            log_auditoria('Tipo ração cadastrado', f'{nome} - R$ {preco_kg}/kg')
+            flash('Tipo de ração cadastrado!', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao cadastrar ração: {str(e)}', 'danger')
         return redirect(url_for('racao.racao'))
 
     tipos = TipoRacao.query.all()
@@ -65,10 +76,18 @@ def consumo_racao():
     if request.method == 'POST':
         animal_id = request.form.get('animal_id')
         tipo_racao_id = request.form.get('tipo_racao_id')
-        try:
-            quantidade_kg = float(request.form.get('quantidade_kg'))
-        except (ValueError, TypeError):
-            flash('Quantidade inválida', 'danger')
+        if not animal_id or not tipo_racao_id:
+            flash('Selecione animal e tipo de ração.', 'danger')
+            return redirect(url_for('racao.consumo_racao'))
+        erro = validate_positive(request.form.get('quantidade_kg'), 'Quantidade (KG)')
+        if erro:
+            flash(erro, 'danger')
+            return redirect(url_for('racao.consumo_racao'))
+        quantidade_kg = float(request.form.get('quantidade_kg'))
+
+        erro = validate_date_range(request.form.get('data'))
+        if erro:
+            flash(erro, 'danger')
             return redirect(url_for('racao.consumo_racao'))
         data = datetime.strptime(request.form.get('data'), '%Y-%m-%d').date()
 
@@ -85,10 +104,14 @@ def consumo_racao():
             quantidade_kg=quantidade_kg, data=data, custo=custo,
             eficiencia=eficiencia
         )
-        db.session.add(novo_consumo)
-        db.session.commit()
-        log_auditoria('Consumo registrado', f'Animal ID {animal_id}, {quantidade_kg}kg')
-        flash('Consumo registrado!', 'success')
+        try:
+            db.session.add(novo_consumo)
+            db.session.commit()
+            log_auditoria('Consumo registrado', f'Animal ID {animal_id}, {quantidade_kg}kg')
+            flash('Consumo registrado!', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao registrar consumo: {str(e)}', 'danger')
         return redirect(url_for('racao.consumo_racao'))
 
     animais = Animal.query.filter_by(ativo=True).all()
@@ -102,7 +125,9 @@ def consumo_racao():
     if filtro_data_fim:
         query = query.filter(ConsumoRacao.data <= datetime.strptime(filtro_data_fim, '%Y-%m-%d').date())
 
-    consumos = query.order_by(ConsumoRacao.data.desc()).all()
+    page = request.args.get('page', 1, type=int)
+    consumos_paginator = query.order_by(ConsumoRacao.data.desc()).paginate(page=page, per_page=50, error_out=False)
+    consumos = consumos_paginator.items
 
     today = date.today().strftime('%Y-%m-%d')
-    return render_template('consumo_racao.html', animais=animais, tipos=tipos, consumos=consumos, today=today)
+    return render_template('consumo_racao.html', animais=animais, tipos=tipos, consumos=consumos, paginator=consumos_paginator, today=today)

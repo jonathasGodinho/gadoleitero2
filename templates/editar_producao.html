@@ -14,6 +14,15 @@
                 <form method="POST" action="/producao/editar/{{ producao.id }}">
                     {{ csrf_token_input|safe }}
                     <div class="mb-3">
+                        <label class="form-label">Animal</label>
+                        <select name="animal_id" class="form-select" required>
+                            <option value="">Selecione um animal...</option>
+                            {% for a in animais %}
+                            <option value="{{ a.id }}" {% if producao.animal_id == a.id %}selected{% endif %}>{{ a.nome }} ({{ a.brinco }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label">Data</label>
                         <input type="date" name="data" class="form-control" value="{{ producao.data.strftime('%Y-%m-%d') }}" required>
                     </div>

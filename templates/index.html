@@ -448,6 +448,21 @@
     </div>
 </div>
 
+{% if alerta_custo_alto %}
+<div class="row g-3 g-md-4 mb-4">
+    <div class="col-12">
+        <div class="alert alert-warning border-0 d-flex align-items-center gap-3 py-3 mb-0" style="border-radius: 12px;">
+            <span style="font-size: 2rem;">⚠️</span>
+            <div class="flex-grow-1">
+                <strong class="d-block" style="font-size: 1rem;">Alerta de Custo Alto!</strong>
+                <span style="font-size: 0.9rem;">O custo de produção hoje é <strong>R$ {{ "%.2f"|format(alerta_custo_quanto) }}</strong> acima da média de 30 dias (R$ {{ "%.2f"|format(custo_litro_media) }}/L). Acompanhe de perto.</span>
+            </div>
+            <a href="{{ url_for('financeiro.financeiro') }}" class="btn btn-sm btn-warning">Ver Despesas</a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- Resumo Executivo -->
 <div class="row g-3 g-md-4 mb-4">
     <div class="col-12">

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from '_pagination.html' import render_pagination %}
 
 {% block title %}Animais - Terra Roxa System{% endblock %}
 {% block page_title %}🐂 Cadastro de Animais{% endblock %}
@@ -44,6 +45,10 @@
                 </div>
                 <div class="row g-2 mb-3">
                     <div class="col-6">
+                        <label class="form-label">Nascimento</label>
+                        <input type="date" name="data_nascimento" class="form-control">
+                    </div>
+                    <div class="col-6">
                         <label class="form-label">Última Inseminação</label>
                         <input type="date" name="data_ultima_inseminacao" class="form-control">
                     </div>
@@ -63,8 +68,13 @@
     </div>
     <div class="col-12 col-md-8">
         <div class="card">
-            <div class="card-header bg-transparent">
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <h5 class="mb-0">📋 Animais Cadastrados</h5>
+                <form method="GET" class="d-flex gap-2">
+                    <input type="text" name="busca" class="form-control form-control-sm" placeholder="Buscar..." value="{{ busca or '' }}">
+                    <button type="submit" class="btn btn-sm btn-outline-primary">🔍</button>
+                    {% if busca %}<a href="{{ url_for('animais.animais') }}" class="btn btn-sm btn-outline-secondary">Limpar</a>{% endif %}
+                </form>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -76,6 +86,7 @@
                             <th>Raça</th>
                             <th>Lote</th>
                             <th>Sexo</th>
+                                <th>Nascimento</th>
                                 <th>Status</th>
                                 <th>Ações</th>
                             </tr>
@@ -96,7 +107,7 @@
                                         -
                                     {% endif %}
                                 </td>
-                                <td>
+                                <td>{{ animal.data_nascimento.strftime('%d/%m/%Y') if animal.data_nascimento else '-' }}</td>
                                     {% if animal.ativo %}
                                     <span class="badge bg-success">Ativo</span>
                                     {% else %}
@@ -145,6 +156,10 @@
                                                     </select>
                                                 </div>
                                                 <div class="mb-2">
+                                                    <label class="form-label">Nascimento</label>
+                                                    <input type="date" name="data_nascimento" class="form-control" value="{{ animal.data_nascimento.strftime('%Y-%m-%d') if animal.data_nascimento else '' }}">
+                                                </div>
+                                                <div class="mb-2">
                                                     <label class="form-label">Lote</label>
                                                     <input type="text" name="lote" class="form-control" value="{{ animal.lote or '' }}" placeholder="Ex: Lote A">
                                                 </div>
@@ -163,12 +178,13 @@
                             </div>
                             {% else %}
                             <tr>
-                                <td colspan="6" class="text-center text-muted py-4">Nenhum animal cadastrado</td>
+                                <td colspan="7" class="text-center text-muted py-4">Nenhum animal cadastrado</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
+                {{ render_pagination(paginator, 'animais.animais') }}
             </div>
         </div>
     </div>

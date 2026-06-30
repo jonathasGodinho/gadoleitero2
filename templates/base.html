@@ -83,7 +83,14 @@
             background-size: cover !important;
             background-attachment: fixed !important;
         }
-        
+
+        body.page-dieta {
+            background: linear-gradient(rgba(247, 249, 247, 0.92), rgba(247, 249, 247, 0.92)), 
+                        url('/static/bg-racao.jpg') !important;
+            background-size: cover !important;
+            background-attachment: fixed !important;
+        }
+
         body.page-financeiro {
             background: linear-gradient(rgba(247, 249, 247, 0.92), rgba(247, 249, 247, 0.92)), 
                         url('/static/bg-financeiro.jpg') !important;
@@ -109,8 +116,9 @@
         body.dark-mode.page-animais,
         body.dark-mode.page-producao,
         body.dark-mode.page-racao,
+        body.dark-mode.page-dieta,
         body.dark-mode.page-financeiro,
-body.dark-mode.page-relatorios,
+        body.dark-mode.page-relatorios,
         body.dark-mode.page-vendas {
             background: linear-gradient(rgba(26, 26, 46, 0.92), rgba(26, 26, 46, 0.92)), 
                         url('/static/bg-dark.jpg') !important;
@@ -555,7 +563,7 @@ body.dark-mode.page-relatorios,
     </style>
     {% block extra_css %}{% endblock %}
 </head>
-<body class="{% if request.path == '/' %}page-dashboard{% elif request.path == '/login' %}page-login{% elif request.path == '/register' %}page-login{% elif '/animais' in request.path %}page-animais{% elif '/producao' in request.path %}page-producao{% elif '/racao' in request.path %}page-racao{% elif '/financeiro' in request.path %}page-financeiro{% elif '/relatorios' in request.path %}page-relatorios{% elif '/vendas-avulsas' in request.path %}page-vendas{% else %}page-dashboard{% endif %} {% if request.cookies.get('darkMode') == 'true' %}dark-mode{% endif %}">
+<body class="{% if request.path == '/' %}page-dashboard{% elif request.path == '/login' %}page-login{% elif request.path == '/register' %}page-login{% elif '/animais' in request.path %}page-animais{% elif '/producao' in request.path %}page-producao{% elif '/racao' in request.path %}page-racao{% elif '/dieta' in request.path %}page-dieta{% elif '/financeiro' in request.path %}page-financeiro{% elif '/relatorios' in request.path %}page-relatorios{% elif '/vendas-avulsas' in request.path %}page-vendas{% else %}page-dashboard{% endif %} {% if request.cookies.get('darkMode') == 'true' %}dark-mode{% endif %}">
     
     <div class="mobile-header d-md-none">
         <div class="d-flex justify-content-between align-items-center">
@@ -605,6 +613,10 @@ body.dark-mode.page-relatorios,
             <a class="nav-link {% if request.path == '/racao' or request.path == '/racao/consumo' %}active{% endif %}" href="/racao" data-bs-toggle="tooltip" data-bs-placement="right" title="Ração">
                 <span class="nav-icon">🌾</span>
                 <span class="sidebar-text">Ração</span>
+            </a>
+            <a class="nav-link {% if request.path == '/dieta' %}active{% endif %}" href="/dieta" data-bs-toggle="tooltip" data-bs-placement="right" title="Dietas">
+                <span class="nav-icon">🥗</span>
+                <span class="sidebar-text">Dietas</span>
             </a>
             <a class="nav-link {% if request.path == '/animais' %}active{% endif %}" href="/animais" data-bs-toggle="tooltip" data-bs-placement="right" title="Animais">
                 <span class="nav-icon">🐂</span>

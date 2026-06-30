@@ -1,0 +1,33 @@
+{% macro render_pagination(paginator, endpoint) %}
+{% if paginator and paginator.pages > 1 %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 px-3 py-2 border-top small">
+    <span class="text-muted">
+        {{ paginator.total }} registro{% if paginator.total != 1 %}s{% endif %}
+        (página {{ paginator.page }} de {{ paginator.pages }})
+    </span>
+    <nav>
+        <ul class="pagination pagination-sm mb-0">
+            <li class="page-item {{ 'disabled' if not paginator.has_prev }}">
+                <a class="page-link" href="{{ url_for(endpoint, page=paginator.prev_num, **request.args.to_dict(flat=True)) if paginator.has_prev else '#' }}" aria-label="Anterior">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+            {% for p in paginator.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                {% if p %}
+                <li class="page-item {{ 'active' if p == paginator.page }}">
+                    <a class="page-link" href="{{ url_for(endpoint, page=p, **request.args.to_dict(flat=True)) }}">{{ p }}</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+            {% endfor %}
+            <li class="page-item {{ 'disabled' if not paginator.has_next }}">
+                <a class="page-link" href="{{ url_for(endpoint, page=paginator.next_num, **request.args.to_dict(flat=True)) if paginator.has_next else '#' }}" aria-label="Próximo">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</div>
+{% endif %}
+{% endmacro %}

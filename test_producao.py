@@ -17,7 +17,6 @@ class TestProducao:
         hoje = date.today().strftime('%Y-%m-%d')
         resp = client.post('/producao', data={
             'litros': '30.5', 'data': hoje, 'preco_venda': '2.50',
-            'gordura': '3.5', 'proteina': '3.2', 'ccs': '200',
         }, follow_redirects=True)
         assert resp.status_code == 200
 

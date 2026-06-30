@@ -5,6 +5,8 @@ from models import Cliente, VendaAvulsa
 from utils import log_auditoria
 from datetime import datetime, date
 from io import BytesIO
+from sqlalchemy import func as sa_func
+from validation import validate_required, validate_nome, validate_email, validate_telefone, validate_positive, validate_date_range, validate_maxlen
 
 vendas_bp = Blueprint('vendas', __name__)
 
@@ -18,14 +20,31 @@ def vendas_avulsas():
 
         if acao == 'cliente':
             nome = request.form.get('nome')
+            erro = validate_nome(nome)
+            if not erro:
+                erro = validate_required(request.form.get('telefone'), 'Telefone')
+            if not erro:
+                erro = validate_telefone(request.form.get('telefone'))
+            if erro:
+                flash(erro, 'danger')
+                return redirect(url_for('vendas.vendas_avulsas'))
+            email_err = validate_email(request.form.get('email'))
+            if email_err:
+                flash(email_err, 'danger')
+                return redirect(url_for('vendas.vendas_avulsas'))
             if Cliente.query.filter_by(nome=nome).first():
                 flash('Cliente já cadastrado!', 'danger')
+                return redirect(url_for('vendas.vendas_avulsas'))
+            endereco = request.form.get('endereco', '')
+            erro_addr = validate_maxlen(endereco, 'Endereco', 300)
+            if erro_addr:
+                flash(erro_addr, 'danger')
                 return redirect(url_for('vendas.vendas_avulsas'))
             cliente = Cliente(
                 nome=nome,
                 telefone=request.form.get('telefone'),
                 email=request.form.get('email'),
-                endereco=request.form.get('endereco')
+                endereco=endereco
             )
             db.session.add(cliente)
             db.session.commit()
@@ -35,9 +54,31 @@ def vendas_avulsas():
 
         elif acao == 'venda':
             cliente_id = request.form.get('cliente_id')
-            data = datetime.strptime(request.form.get('data'), '%Y-%m-%d').date()
-            litros = float(request.form.get('litros'))
-            valor_litro = float(request.form.get('valor_litro'))
+            if not cliente_id:
+                flash('Selecione um cliente.', 'danger')
+                return redirect(url_for('vendas.vendas_avulsas'))
+            data_str = request.form.get('data')
+            erro = validate_date_range(data_str)
+            if erro:
+                flash(erro, 'danger')
+                return redirect(url_for('vendas.vendas_avulsas'))
+            data = datetime.strptime(data_str, '%Y-%m-%d').date()
+            litros_str = request.form.get('litros')
+            erro = validate_required(litros_str, 'Litros')
+            if not erro:
+                erro = validate_positive(litros_str, 'Litros')
+            if erro:
+                flash(erro, 'danger')
+                return redirect(url_for('vendas.vendas_avulsas'))
+            litros = float(litros_str)
+            valor_litro_str = request.form.get('valor_litro')
+            erro = validate_required(valor_litro_str, 'Valor por litro')
+            if not erro:
+                erro = validate_positive(valor_litro_str, 'Valor por litro')
+            if erro:
+                flash(erro, 'danger')
+                return redirect(url_for('vendas.vendas_avulsas'))
+            valor_litro = float(valor_litro_str)
             total = round(litros * valor_litro, 2)
             venda = VendaAvulsa(cliente_id=cliente_id, data=data, litros=litros, valor_litro=valor_litro, total=total)
             db.session.add(venda)
@@ -46,14 +87,21 @@ def vendas_avulsas():
             flash('Venda registrada com sucesso!', 'success')
             return redirect(url_for('vendas.vendas_avulsas'))
 
+    busca = request.args.get('busca', '').strip()
     clientes = Cliente.query.order_by(Cliente.nome).all()
-    vendas = VendaAvulsa.query.order_by(VendaAvulsa.data.desc()).all()
-    total_litros_geral = sum(float(v.litros) for v in vendas)
-    total_valor_geral = sum(float(v.total) for v in vendas)
+    vendas_query = VendaAvulsa.query.join(Cliente)
+    if busca:
+        vendas_query = vendas_query.filter(Cliente.nome.ilike(f'%{busca}%'))
+    page = request.args.get('page', 1, type=int)
+    vendas_paginator = vendas_query.order_by(VendaAvulsa.data.desc()).paginate(page=page, per_page=50, error_out=False)
+    vendas = vendas_paginator.items
+    total_litros_geral = vendas_query.with_entities(sa_func.coalesce(sa_func.sum(VendaAvulsa.litros), 0)).scalar()
+    total_valor_geral = vendas_query.with_entities(sa_func.coalesce(sa_func.sum(VendaAvulsa.total), 0)).scalar()
     return render_template('vendas_avulsas.html', clientes=clientes, vendas=vendas,
+                           paginator=vendas_paginator,
                            total_litros_geral=total_litros_geral,
                            total_valor_geral=total_valor_geral,
-                           today=date.today())
+                           today=date.today(), busca=busca)
 
 
 @vendas_bp.route('/vendas-avulsas/exportar/pdf')
@@ -200,10 +248,14 @@ def vendas_exportar_excel():
 @login_required
 def excluir_cliente(id):
     cliente = Cliente.query.get_or_404(id)
-    VendaAvulsa.query.filter_by(cliente_id=id).delete()
-    db.session.delete(cliente)
-    db.session.commit()
-    flash('Cliente excluído!', 'success')
+    try:
+        VendaAvulsa.query.filter_by(cliente_id=id).delete()
+        db.session.delete(cliente)
+        db.session.commit()
+        flash('Cliente excluído!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao excluir cliente: {str(e)}', 'danger')
     return redirect(url_for('vendas.vendas_avulsas'))
 
 
@@ -211,14 +263,18 @@ def excluir_cliente(id):
 @login_required
 def editar_venda_avulsa(id):
     venda = VendaAvulsa.query.get_or_404(id)
-    venda.cliente_id = request.form.get('cliente_id')
-    venda.data = datetime.strptime(request.form.get('data'), '%Y-%m-%d').date()
-    venda.valor_litro = float(request.form.get('valor_litro'))
-    venda.litros = float(request.form.get('litros'))
-    venda.total = round(venda.litros * venda.valor_litro, 2)
-    db.session.commit()
-    log_auditoria('Venda editada', f'{venda.litros}L - R$ {venda.total}')
-    flash('Venda atualizada!', 'success')
+    try:
+        venda.cliente_id = request.form.get('cliente_id')
+        venda.data = datetime.strptime(request.form.get('data'), '%Y-%m-%d').date()
+        venda.valor_litro = float(request.form.get('valor_litro'))
+        venda.litros = float(request.form.get('litros'))
+        venda.total = round(venda.litros * venda.valor_litro, 2)
+        db.session.commit()
+        log_auditoria('Venda editada', f'{venda.litros}L - R$ {venda.total}')
+        flash('Venda atualizada!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao atualizar venda: {str(e)}', 'danger')
     return redirect(url_for('vendas.vendas_avulsas'))
 
 
@@ -226,7 +282,11 @@ def editar_venda_avulsa(id):
 @login_required
 def excluir_venda_avulsa(id):
     venda = VendaAvulsa.query.get_or_404(id)
-    db.session.delete(venda)
-    db.session.commit()
-    flash('Venda excluída!', 'success')
+    try:
+        db.session.delete(venda)
+        db.session.commit()
+        flash('Venda excluída!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao excluir venda: {str(e)}', 'danger')
     return redirect(url_for('vendas.vendas_avulsas'))

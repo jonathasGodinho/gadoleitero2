@@ -94,10 +94,14 @@ def index():
         SaudeAnimal.proxima_dose >= date.today()
     ).all()
     
-    custo_producao_hoje = calcular_custo_producao(today, today)
+    custo_producao_hoje = float(calcular_custo_producao(today, today))
     
     custo_litro_dias, custo_litro_valores = evolucao_custo_litro(30)
+    custo_litro_valores = [float(v) for v in custo_litro_valores]
     custo_litro_media = round(sum(custo_litro_valores) / len(custo_litro_valores), 4) if custo_litro_valores else 0
+    
+    alerta_custo_alto = custo_producao_hoje > custo_litro_media * 1.3 and custo_litro_media > 0
+    alerta_custo_quanto = round(custo_producao_hoje - custo_litro_media, 4) if alerta_custo_alto else 0
     
     # Resumo mensal de produção
     primeiro_dia_mes = date(today.year, today.month, 1)
@@ -155,6 +159,8 @@ def index():
                            receita_mensal=receita_mensal,
                            custo_litro_dias=custo_litro_dias,
                            custo_litro_valores=custo_litro_valores,
-                            custo_litro_media=custo_litro_media,
-                            meses_labels=meses_labels,
-                            valores_mensais=valores_mensais)
+                           custo_litro_media=custo_litro_media,
+                           alerta_custo_alto=alerta_custo_alto,
+                           alerta_custo_quanto=alerta_custo_quanto,
+                           meses_labels=meses_labels,
+                           valores_mensais=valores_mensais)
