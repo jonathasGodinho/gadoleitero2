@@ -15,15 +15,6 @@
                     <form method="POST">
                     {{ csrf_token_input|safe }}
                     <div class="mb-3">
-                        <label class="form-label">Animal</label>
-                        <select name="animal_id" class="form-select" required>
-                            <option value="">Selecione um animal...</option>
-                            {% for a in animais %}
-                            <option value="{{ a.id }}">{{ a.nome }} ({{ a.brinco }})</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="mb-3">
                         <label class="form-label">Data</label>
                         <input type="date" name="data" class="form-control" value="{{ today }}" required>
                     </div>
@@ -66,7 +57,6 @@
                         <thead>
                             <tr>
                                 <th>Data</th>
-                                <th>Animal</th>
                                 <th>Litros</th>
 
                                 <th>Preço/L</th>
@@ -78,7 +68,6 @@
                             {% for p in producoes %}
                             <tr>
                                 <td>{{ p.data.strftime('%d/%m/%Y') }}</td>
-                                <td>{{ p.animal.nome if p.animal else '-' }}</td>
                                 <td>{{ p.litros|int }} L</td>
 
                                 <td>R$ {{ "%.2f"|format(p.preco_venda) }}</td>
@@ -90,7 +79,7 @@
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="6" class="text-center text-muted">Nenhuma produção registrada</td>
+                                <td colspan="5" class="text-center text-muted">Nenhuma produção registrada</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -98,7 +87,6 @@
                         <tfoot class="table-dark">
                             <tr>
                                 <th>Total</th>
-                                <th></th>
                                 <th>{{ total_litros_geral|int }} L</th>
                                 <th></th>
                                 <th>R$ {{ "%.2f"|format(total_receber_geral) }}</th>
